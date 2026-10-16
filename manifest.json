@@ -1,0 +1,9 @@
+{
+	"id": "smartSync",
+	"name": "Smart Sync",
+	"version": "0.1.0",
+	"minAppVersion": "1.13.2",
+	"description": "Sync notes, attachments and selected settings with compression and client-side encryption.",
+	"author": "lihy",
+	"isDesktopOnly": false
+}
