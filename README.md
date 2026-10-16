@@ -8,7 +8,7 @@ Official project distribution location: https://github.com/adventurer2008/obsidi
 
 This public repository contains user documentation, plugin metadata and license notices. Client and Server implementation sources are maintained in separate private repositories. Obsidian Community reviewers can be granted read access to the private Client source repository through the official Community directory GitHub App, so the released client can be checked against its source. That setup and Community approval are not completed merely by creating this repository.
 
-No installable GitHub Release is published yet. When a version is ready, its matching version tag will provide main.js, manifest.json and styles.css as Release attachments. This repository does not announce a release or completed Community review.
+The current candidate metadata is version 0.1.1 with plugin ID `smart-sync`. No installable GitHub Release is published yet. When a version is ready, its matching version tag will provide main.js, manifest.json and styles.css as Release attachments. This repository does not announce a release or completed Community review.
 
 ## Features
 
@@ -28,7 +28,7 @@ The plugin uses the selected vault, selected configuration scope and Obsidian se
 
 ## Compatibility and validation
 
-The current protocol 2 implementation is incompatible with protocol 1 ciphertext, service databases and device state. Use a fresh synthetic test vault and a separate service dataset; do not overwrite a configured protocol 1 installation or connect a production vault. Windows native trust confirmation and dependent host integration checks are deferred. Physical Android, public-network and production acceptance are not claimed.
+The current protocol 2 implementation is incompatible with protocol 1 ciphertext, service databases and device state. Earlier synthetic `smartSync` installations use a different plugin ID and are not silently migrated. Use a fresh synthetic test vault and a separate service dataset; do not overwrite a configured protocol 1 installation or connect a production vault. Windows native trust confirmation and dependent host integration checks are deferred. Physical Android, public-network and production acceptance are not claimed.
 
 ## License and support
 
