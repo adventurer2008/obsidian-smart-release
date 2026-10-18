@@ -1,6 +1,6 @@
 # Privacy notice — 无界同步 (China edition)
 
-Prepared on 18 October 2026. This notice is a publication candidate and takes effect only when this release is approved and published.
+Effective date: 18 October 2026.
 
 ## Scope and contact
 

@@ -2,9 +2,9 @@
 
 China edition of Smart Sync. Plugin ID: `smart-sync`.
 
-This repository distributes the China edition. Installable versions are available only after a matching GitHub Release is published. A prepared file or draft release does not establish service acceptance.
+This repository distributes the China edition of 无界同步 through GitHub Releases and BRAT.
 
-## Installation after publication
+## Installation
 
 Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable 无界同步. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
