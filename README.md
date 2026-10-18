@@ -1,37 +1,19 @@
-# Smart Sync
+# 无界同步
 
-Sync notes, attachments and selected Obsidian settings using client-side encryption and a separate synchronization service.
+China edition of Smart Sync. Plugin ID: `smart-sync`.
 
-## Distribution repository
+This repository distributes the China edition. Installable versions are available only after a matching GitHub Release is published. A prepared file or draft release does not establish service acceptance.
 
-Official project distribution location: https://github.com/adventurer2008/obsidian-smart-release .
+## Installation after publication
 
-This public repository contains user documentation, plugin metadata and license notices. Client and Server implementation sources are maintained in separate private repositories. Obsidian Community reviewers can be granted read access to the private Client source repository through the official Community directory GitHub App, so the released client can be checked against its source. That setup and Community approval are not completed merely by creating this repository.
+Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable 无界同步. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
-The current candidate metadata is version 0.1.1 with plugin ID `smart-sync`. No installable GitHub Release is published yet. When a version is ready, its matching version tag will provide main.js, manifest.json and styles.css as Release attachments. This repository does not announce a release or completed Community review.
+## Account and service
 
-## Features
+An approved China account and notebook encryption passphrase are required. The service origin is `[service endpoint configured by client]`. Project home: https://github.com/adventurer2008/obsidian-smart-release . Overseas Smart Sync accounts and data are separate. Do not enable both editions in the same vault.
 
-- Client-side compression and authenticated encryption of note contents and paths.
-- Automatic/manual synchronization, offline retry and preserved conflicting changes.
-- Version history, recoverable deletion and on-demand attachments.
-- Optional synchronization of selected settings, themes and other-plugin configuration.
-- Device pairing, encrypted recovery and device revocation.
+Contents and paths are encrypted on the client before upload; the service still processes account and workspace identifiers, enrollment email, notebook/device labels, timestamps, ciphertext sizes, diagnostics and opaque identifiers. Keep the notebook encryption passphrase safe: the service cannot recover it. See [the privacy notice](PRIVACY.md). Public-beta access is subject to approval; no payment or permanent free-service guarantee is announced. Windows acceptance and physical Android/iOS/macOS acceptance are tracked separately; do not treat `isDesktopOnly: false` as proof of physical-device validation.
 
-## Service, account and privacy
+## Release files and source review
 
-A compatible Smart Sync service, an issued login key or approved device pairing, and a notebook encryption passphrase are required. The plugin connects to the service address configured by the user to synchronize ciphertext and manage devices/history. There is no service-side recovery of a lost notebook passphrase. No production service availability, pricing or permanent free-service promise is made here.
-
-Contents and paths are encrypted on the client before upload. The service still processes account/workspace identifiers, email for enrollment, timestamps, sequence numbers, ciphertext sizes/digests and opaque identifiers. Keys are recorded as digests; a configured email provider receives issued login keys for delivery. Audit records include opaque actors and API actions. No client analytics are included. Deployment-specific service operators must disclose their endpoints, providers and applicable privacy terms before public service use.
-
-The plugin uses the selected vault, selected configuration scope and Obsidian secret storage. A local plaintext merge-base cache and archived pending state may remain in plugin data and are excluded from synchronization. Selected other-plugin settings can contain sensitive values; enable this scope deliberately.
-
-## Compatibility and validation
-
-The current protocol 2 implementation is incompatible with protocol 1 ciphertext, service databases and device state. Earlier synthetic `smartSync` installations use a different plugin ID and are not silently migrated. Use a fresh synthetic test vault and a separate service dataset; do not overwrite a configured protocol 1 installation or connect a production vault. Windows native trust confirmation and dependent host integration checks are deferred. Physical Android, public-network and production acceptance are not claimed.
-
-## License and support
-
-The client distribution is MIT licensed, copyright 2026 lihy. Bundled dependency notices are retained in [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md) and the client artifact. Keeping source repositories private does not change permissions already granted under the applicable license. See [LICENSE](./LICENSE).
-
-Use this repository's Issues for bug reports. Do not attach credentials, recovery packages or private note data. Smart Sync is an independent community project and is not an official Obsidian product.
+Install files are `main.js`, `manifest.json`, and `styles.css` from a matching GitHub Release. Do not install a source-code archive. Client and Server source repositories remain private. The plugin includes licensed dependencies; see LICENSE and THIRD-PARTY-NOTICES.md. No credentials or test data are distributed.
