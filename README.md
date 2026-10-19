@@ -8,13 +8,13 @@ This repository distributes the China edition of 无界同步 through GitHub Rel
 
 Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable 无界同步. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
-## Version 0.1.75 — 2026-10-19
+## Version 0.1.76 — 2026-10-19
 
-Version 0.1.75 adds default sync scope selection for new configurations and an independent Community plugin activation switch, enabled by default. Activation takes effect after restarting Obsidian; sync plugins preserve their local activation. Existing scope preferences are retained. The settings heading is now 无界同步.
+Device management groups account devices with their workspace sessions, retains automatic device labels and avoids duplicate rows. Pairing windows close after the specific receiving device connects and reports activity; the six-digit code is blue and larger.
 
-Device management loads immediately and reports automatic device labels. Scope changes wait for the active cycle. Cancellation and timeouts cover network/body and WebRTC waits; short-lived caches, idle backoff and smaller mobile batches reduce repeated work. The operator dashboard adds authorized terminal counts and device analysis. See the release notes for the complete change list.
+Local title/content search and Recent files have separate sidebar buttons and independent advanced switches. Recent files remembers the latest 20 unique files locally in a compact title-only list. Whole-note and selected-text encryption add temporary unlocking, encrypted saves, locking, password changes and permanent decryption, with compact desktop/mobile controls. Passwords require at least four characters; keep them safe because the service cannot recover them. Encrypted contents and password hints are excluded from search, while titles remain visible. See the release notes for details and selection limits.
 
-The matching service 0.1.25 has passed staging and production checks with note contents and original modification times preserved. BRAT users tracking latest can update from 0.1.74 when GitHub is reachable. Community plugin activation defaults to enabled on upgrade when no previous selection exists. Verify release files against SHA256SUMS.txt. Physical-device acceptance and battery/performance gains remain unverified; the previously reported Windows stall has no confirmed field root cause. Previous release assets remain unchanged.
+The paired service 0.1.25 has passed staging and production checks with note contents and original modification times preserved. BRAT users tracking latest can update from 0.1.75 when GitHub is reachable. Verify release files against SHA256SUMS.txt. Physical Android/iOS/macOS acceptance and battery/performance gains remain unverified; the earlier Windows stall has no confirmed field root cause. Previous release assets remain unchanged.
 
 ## Account and service
 
