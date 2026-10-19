@@ -8,13 +8,13 @@ This repository distributes the China edition of 无界同步 through GitHub Rel
 
 Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable 无界同步. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
-## Version 0.1.76 — 2026-10-19
+## Version 0.1.77 — 2026-10-20
 
-Device management groups account devices with their workspace sessions, retains automatic device labels and avoids duplicate rows. Pairing windows close after the specific receiving device connects and reports activity; the six-digit code is blue and larger.
+Device management retains device details, refresh and confirmed revocation while removing the remote direction dropdown and Save action. Newly generated pairing codes are separately styled blue, larger and bold on mobile as well as desktop; the six-digit input keeps numeric validation.
 
-Local title/content search and Recent files have separate sidebar buttons and independent advanced switches. Recent files remembers the latest 20 unique files locally in a compact title-only list. Whole-note and selected-text encryption add temporary unlocking, encrypted saves, locking, password changes and permanent decryption, with compact desktop/mobile controls. Passwords require at least four characters; keep them safe because the service cannot recover them. Encrypted contents and password hints are excluded from search, while titles remain visible. See the release notes for details and selection limits.
+Large attachment downloads read one ciphertext segment ahead while preserving authentication, original modification times and recovery. Completed receives are persisted before upload scanning and direction/checkpoint transitions. Diagnostics upload in bounded batches, retain active rounds and prioritize failures; transient conflicts keep bounded cancellable retries with renewed scope checks.
 
-The paired service 0.1.25 has passed staging and production checks with note contents and original modification times preserved. BRAT users tracking latest can update from 0.1.75 when GitHub is reachable. Verify release files against SHA256SUMS.txt. Physical Android/iOS/macOS acceptance and battery/performance gains remain unverified; the earlier Windows stall has no confirmed field root cause. Previous release assets remain unchanged.
+The paired service 0.1.25 remains schema compatible. BRAT users tracking latest can update from 0.1.76 when GitHub is reachable. Verify release files against SHA256SUMS.txt. Controlled tests do not establish Android/iPad speed or memory gains; physical Android/iOS/iPad/macOS acceptance and the earlier Windows stall root cause remain unverified. Previous release assets remain unchanged.
 
 ## Account and service
 
