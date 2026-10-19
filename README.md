@@ -8,11 +8,11 @@ This repository distributes the China edition of 无界同步 through GitHub Rel
 
 Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable 无界同步. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
-## Accepted 0.1.73 refresh — 2026-10-19
+## Version 0.1.74 — 2026-10-19
 
-The refreshed 0.1.73 release contains the accepted client for independently pinning multiple notes, attachments and folders, including empty folders, with encrypted pin-state synchronization between devices. Note contents and original modification times are preserved. The matching service has been deployed to staging and production.
+Version 0.1.74 includes the accepted gray outline pin icon and supports independently pinning multiple notes, attachments and folders, including empty folders, with encrypted pin-state synchronization between devices. Note contents and original modification times are preserved. The matching service has been deployed to staging and production.
 
-BRAT checks version numbers. If you already installed 0.1.73, use BRAT's reinstall action for this repository to fetch this same-version refresh; an ordinary automatic update check will skip it. New installations fetch the refreshed files. Verify the downloaded files against the release's SHA256SUMS.txt. Physical-device acceptance is separate from Windows synthetic-vault and production API checks.
+BRAT can detect 0.1.74 as an update from 0.1.73. Enable BRAT automatic updates or run its update command, and keep the repository subscription on latest rather than a frozen version. GitHub access is required. Verify the downloaded files against the release's SHA256SUMS.txt. Physical-device acceptance is separate from Windows synthetic-vault and production API checks. Existing 0.1.73 assets remain available.
 
 ## Account and service
 
