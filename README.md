@@ -10,13 +10,13 @@ This repository distributes the China edition of 无界同步 through GitHub Rel
 
 Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable Wujie Sync. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
-## Version 0.1.80 — 2026-10-20
+## Version 0.1.81 — 2026-10-20
 
-The installed plugin name is Wujie Sync, with plugin ID wujie-sync unchanged. Notebook usage and account quotas now use original file sizes before compression; history and trash do not count toward the current-file logical quota. The management console shows logical usage and stored data separately. Older notebooks remain unknown until an updated client verifies and backfills their encrypted manifests.
+Device pairing can be approved while file synchronization is running. Pairing requests, device revocation and storage overview refresh do not contend with the file transfer lock. Operations that require a stable file or version state explain when to wait or stop the current round.
 
-Configuration conflict recovery copies remain on the local device and are excluded from normal synchronization. Update every device to 0.1.80 before making new changes: the paired service 0.1.26 requires original-size metadata for new versions. This release remains a free public beta for users in China. Paid plans have not been announced.
+Fingerprint verification, encrypted key transfer and account/notebook checks remain required. File contents and original modification times are preserved. The paired hosted service remains 0.1.26, with no new protocol or database schema change. All 0.1.80 functionality remains included; older notebooks still require an updated client to verify original-size metadata.
 
-Targeted local checks, complete paired CI, staging and same-runtime production acceptance are required. Physical Android/iOS/iPad/macOS installation and performance remain unverified. Previous releases are retained. Verify downloaded files against SHA256SUMS.txt.
+Complete local checks, paired CI, staging and same-runtime production acceptance are required. Physical Android/iOS/iPad/macOS installation and performance remain unverified. BRAT users tracking latest can update to 0.1.81 when GitHub is reachable. Previous releases are retained. Verify downloaded files against SHA256SUMS.txt.
 
 ## Account and service
 

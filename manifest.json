@@ -1,7 +1,7 @@
 {
   "id": "wujie-sync",
   "name": "Wujie Sync",
-  "version": "0.1.80",
+  "version": "0.1.81",
   "minAppVersion": "1.13.2",
   "description": "Sync notes, attachments and selected settings with compression and client-side encryption.",
   "author": "lihy",
