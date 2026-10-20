@@ -8,7 +8,11 @@ This repository distributes the China edition of 无界同步 through GitHub Rel
 
 Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable 无界同步. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
-## Version 0.1.78 — 2026-10-20
+## Version 0.1.79 — 2026-10-20
+
+This maintenance release retains the functionality of 0.1.78 and exercises the maintained release pipeline with four independent Windows content environments, paired Linux validation, staging and same-runtime production acceptance. No synchronization protocol or dependency changes are introduced. BRAT users tracking latest can update to 0.1.79 when GitHub is reachable.
+
+## Previously released: 0.1.78
 
 Device management gives each device a separate card and revoke action, identifies the current device and collapses revoked records into an expandable history. Revoking an account device also invalidates its notebook sessions and pending pairing, removing those sessions from the active list. Revocation does not delete notes stored on the device.
 
