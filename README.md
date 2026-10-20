@@ -1,6 +1,8 @@
-# 无界同步
+# Wujie Sync
 
-China edition of Smart Sync. Plugin ID: `wujie-sync`.
+Wujie Sync (无界同步) is designed for users in China. Plugin ID: `wujie-sync`.
+
+Wujie Sync is designed for users in China and is currently in a free public beta. An account and approval are required to use the hosted synchronization service. Paid plans have not been announced. Any future pricing and changes to beta access will be communicated in advance.
 
 This repository distributes the China edition of 无界同步 through GitHub Releases and BRAT.
 
