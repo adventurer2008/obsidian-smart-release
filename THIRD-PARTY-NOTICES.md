@@ -1,5 +1,9 @@
 # Client dependency notices
 
+## First-party license scope
+
+Copyright (c) 2026 lihy. First-party Client code in new candidates after the existing 0.1.81 release is licensed under Apache License 2.0; see LICENSE. Existing 0.1.81 and earlier releases retain their original MIT terms and unchanged assets. This does not license Server software or access to the hosted service. Dependency notices and licenses below remain unchanged.
+
 ## node-diff3 3.2.1
 
 Source: https://github.com/bhousel/node-diff3
