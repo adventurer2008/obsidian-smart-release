@@ -8,13 +8,13 @@ This repository distributes the China edition of 无界同步 through GitHub Rel
 
 Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable 无界同步. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
-## Version 0.1.77 — 2026-10-20
+## Version 0.1.78 — 2026-10-20
 
-Device management retains device details, refresh and confirmed revocation while removing the remote direction dropdown and Save action. Newly generated pairing codes are separately styled blue, larger and bold on mobile as well as desktop; the six-digit input keeps numeric validation.
+Device management gives each device a separate card and revoke action, identifies the current device and collapses revoked records into an expandable history. Revoking an account device also invalidates its notebook sessions and pending pairing, removing those sessions from the active list. Revocation does not delete notes stored on the device.
 
-Large attachment downloads read one ciphertext segment ahead while preserving authentication, original modification times and recovery. Completed receives are persisted before upload scanning and direction/checkpoint transitions. Diagnostics upload in bounded batches, retain active rounds and prioritize failures; transient conflicts keep bounded cancellable retries with renewed scope checks.
+Storage cleanup uses a confirmation dropdown for the current notebook, explains each action and reports released capacity. Storage sizes and transfer rates consistently use B, KB, MB and GB. Existing encryption, pinning, local search, synchronization, history and recovery remain available.
 
-The paired service 0.1.25 remains schema compatible. BRAT users tracking latest can update from 0.1.76 when GitHub is reachable. Verify release files against SHA256SUMS.txt. Controlled tests do not establish Android/iPad speed or memory gains; physical Android/iOS/iPad/macOS acceptance and the earlier Windows stall root cause remain unverified. Previous release assets remain unchanged.
+Release validation includes repeated enrollment/revocation and four isolated environments with four synthetic devices and about 512 MB of files each, covering file and folder changes through the encrypted sync engine. These automated tests do not establish physical Android/iOS/iPad/macOS performance or installation acceptance. The paired service 0.1.25 remains schema compatible. BRAT users tracking latest can update from 0.1.77 when GitHub is reachable. Verify release files against SHA256SUMS.txt. Previous release assets remain unchanged.
 
 ## Account and service
 
