@@ -8,19 +8,15 @@ This repository distributes the China edition of 无界同步 through GitHub Rel
 
 ## Installation
 
-Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable 无界同步. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
+Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable Wujie Sync. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
-## Version 0.1.79 — 2026-10-20
+## Version 0.1.80 — 2026-10-20
 
-This maintenance release retains the functionality of 0.1.78 and exercises the maintained release pipeline with four independent Windows content environments, paired Linux validation, staging and same-runtime production acceptance. No synchronization protocol or dependency changes are introduced. BRAT users tracking latest can update to 0.1.79 when GitHub is reachable.
+The installed plugin name is Wujie Sync, with plugin ID wujie-sync unchanged. Notebook usage and account quotas now use original file sizes before compression; history and trash do not count toward the current-file logical quota. The management console shows logical usage and stored data separately. Older notebooks remain unknown until an updated client verifies and backfills their encrypted manifests.
 
-## Previously released: 0.1.78
+Configuration conflict recovery copies remain on the local device and are excluded from normal synchronization. Update every device to 0.1.80 before making new changes: the paired service 0.1.26 requires original-size metadata for new versions. This release remains a free public beta for users in China. Paid plans have not been announced.
 
-Device management gives each device a separate card and revoke action, identifies the current device and collapses revoked records into an expandable history. Revoking an account device also invalidates its notebook sessions and pending pairing, removing those sessions from the active list. Revocation does not delete notes stored on the device.
-
-Storage cleanup uses a confirmation dropdown for the current notebook, explains each action and reports released capacity. Storage sizes and transfer rates consistently use B, KB, MB and GB. Existing encryption, pinning, local search, synchronization, history and recovery remain available.
-
-Release validation includes repeated enrollment/revocation and four isolated environments with four synthetic devices and about 512 MB of files each, covering file and folder changes through the encrypted sync engine. These automated tests do not establish physical Android/iOS/iPad/macOS performance or installation acceptance. The paired service 0.1.25 remains schema compatible. BRAT users tracking latest can update from 0.1.77 when GitHub is reachable. Verify release files against SHA256SUMS.txt. Previous release assets remain unchanged.
+Targeted local checks, complete paired CI, staging and same-runtime production acceptance are required. Physical Android/iOS/iPad/macOS installation and performance remain unverified. Previous releases are retained. Verify downloaded files against SHA256SUMS.txt.
 
 ## Account and service
 
