@@ -5,7 +5,7 @@
 - Uses the current regional repository links and Apache-2.0 for this release; previous MIT releases remain unchanged.
 - Includes maintained release-tool and regression-fixture improvements. Server remains 0.1.26 with no protocol or database schema change.
 
-Full local tests (including both large-file rounds), exact paired CI, staging with actual administrator mail receipt and same-runtime production synthetic checks passed before publication. Physical Android/iOS/iPad/macOS acceptance and official Community release review are separate. Google login, billing and Global hosting are not introduced.
+Full local tests (including both large-file rounds), exact paired CI, staging with actual administrator mail receipt and same-runtime production synthetic checks passed before publication. Physical Android/iOS/iPad/macOS acceptance and official Community release review are separate.
 
 Public Client source: 25ccf61bc44fffd4ecaa058aeddbb99f3b5e33e6
 

@@ -4,7 +4,7 @@
 
 ## 范围与联系
 
-本说明适用于国内版：0.1.73 起插件 ID 为 `wujie-sync`，0.1.72 及更早为 `smart-sync`，服务地址为 `[service endpoint configured by client]`。服务由无界同步项目维护者维护，联系邮箱：**admin@wujiesync.cc**。Global 版不在本说明范围内，国内与海外账号、云端数据独立。
+本说明适用于国内版：0.1.73 起插件 ID 为 `wujie-sync`，0.1.72 及更早为 `smart-sync`。服务由无界同步项目维护者维护，联系邮箱：**admin@wujiesync.cc**。
 
 ## 处理的信息
 

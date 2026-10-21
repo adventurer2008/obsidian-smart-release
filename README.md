@@ -58,12 +58,6 @@
 
 完整本地测试、精确配对 CI、预发验收、真实管理员邮件收件及同运行包生产合成验收已通过。官方社区已完成 0.1.82 扫描及构建逐字节一致性验证；物理 Android、iOS、iPad、macOS 的安装和性能验收尚未完成。网页上架不等于每台客户端的搜索、安装均已验证。
 
-## 账号、加密与服务
-
-国内服务地址为 `[service endpoint configured by client]`，使用已开通的国内账号及笔记库加密口令。国内版与海外版的账号和云端数据独立，不要在同一个笔记库中同时启用两个版本。
-
-正文、路径及原始修改时间在客户端加密后上传；服务仍会处理账号、工作区、申请邮箱、笔记库和设备标签、时间戳、密文大小、诊断等运行信息。请妥善保管加密口令，服务端无法找回。详见[隐私说明](PRIVACY.md)。公测不代表永久免费承诺。
-
 ## 安装文件与源码
 
 唯一 Client 开发主线为 [obsidian-smart-sync-client](https://github.com/adventurer2008/obsidian-smart-sync-client)。本发行库的源码由固定公开提交自动导出，用于同库审核与可复现构建；不要直接在本仓库开发第二套 Client。`SOURCE-SNAPSHOT.json` 记录来源提交、文件摘要和地区转换。Server 源码及内部运维工具保持私有，不公开凭据或真实测试数据。
@@ -93,8 +87,8 @@ npm run build
 
 Copyright (c) 2026 lihy。0.1.82 及后续 Client 候选采用 [Apache License 2.0](LICENSE)；0.1.81 及更早已发布版本保留原 MIT 条款和附件。第三方依赖遵循 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) 中各自的许可。Client 许可不包含私有 Server，也不授予托管服务访问权；Apache-2.0 允许商业复用。
 
-本仓库由 `obsidian-smart-release` 改名而来，旧链接保留跳转，插件 ID 不变。[Global 发行库](https://github.com/adventurer2008/obsidian-smart-sync-release-global)当前仍为占位，尚无运行发行版。
+本仓库由 `obsidian-smart-release` 改名而来，旧链接保留跳转，插件 ID 不变。
 
 ## 文档语言
 
-CHG-20261021-15 / U301/R311 / DEC292：国内发行库的首页、安装说明、隐私说明和后续更新记录以简体中文为主；Global 发行库面向用户的文档使用英文。英文参考副本可保留。许可证原文、第三方版权声明及机器可读字段不为翻译而改写；官方社区要求英文的介绍字段继续使用英文。
+CHG-20261021-15 / U301/R311 / DEC292：国内发行库的首页、安装说明、隐私说明和后续更新记录以简体中文为主。英文参考副本可保留。许可证原文、第三方版权声明及机器可读字段不为翻译而改写；官方社区要求英文的介绍字段继续使用英文。

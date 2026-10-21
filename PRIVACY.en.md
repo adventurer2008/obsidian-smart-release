@@ -4,7 +4,7 @@ Effective date: 18 October 2026.
 
 ## Scope and contact
 
-This notice describes the China edition, plugin ID `wujie-sync` from version 0.1.73 (legacy ID `smart-sync` through 0.1.72), and its service at `[service endpoint configured by client]`. The service is maintained by the 无界同步 project maintainer. Contact: **admin@wujiesync.cc**. The separate Global edition is outside this notice; China and Global accounts and cloud data are independent.
+This notice describes the China edition, plugin ID `wujie-sync` from version 0.1.73 (legacy ID `smart-sync` through 0.1.72). The service is maintained by the 无界同步 project maintainer. Contact: **admin@wujiesync.cc**.
 
 ## Information processed
 
