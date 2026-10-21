@@ -1,0 +1,15 @@
+{
+  "edition": "cn",
+  "id": "wujie-sync",
+  "name": "Wujie Sync",
+  "locale": "zh-CN",
+  "repository": "adventurer2008/obsidian-smart-sync-release-cn",
+  "channel": "brat",
+  "serviceOrigin": "https://sync.wujiesync.cc",
+  "stagingOrigin": "http://127.0.0.1:24819",
+  "website": "https://github.com/adventurer2008/obsidian-smart-sync-release-cn",
+  "privacyUrl": "https://github.com/adventurer2008/obsidian-smart-sync-release-cn/blob/main/PRIVACY.md",
+  "mailFrom": "admin@wujiesync.cc",
+  "mailProfile": "existing-cn",
+  "hostingRegion": "china"
+}

@@ -1,0 +1,36 @@
+{
+  "name": "obsidian-smart-client",
+  "version": "0.1.81",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "build": "node scripts/community-build.mjs",
+    "build:cn": "node scripts/build.mjs --edition=cn",
+    "build:global": "node scripts/build.mjs --edition=global",
+    "build:all": "node scripts/build.mjs --all",
+    "check:isolation": "node scripts/check-isolation.mjs",
+    "check:editions": "node scripts/check-isolation.mjs cn && node scripts/check-isolation.mjs global",
+    "check:community": "node tools/community-lint/run.mjs cn"
+  },
+  "devDependencies": {
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.13",
+    "esbuild": "0.28.1",
+    "jsdom": "26.1.0"
+  },
+  "dependencies": {
+    "@noble/ed25519": "3.2.0",
+    "fflate": "0.8.3",
+    "node-diff3": "3.2.1"
+  },
+  "description": "Shared Client source for Wujie Sync and Smart Sync regional builds.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adventurer2008/obsidian-smart-sync-client.git"
+  }
+}

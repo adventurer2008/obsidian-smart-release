@@ -1,0 +1,16 @@
+{
+  "edition": "global",
+  "id": "smart-sync-global",
+  "name": "Smart Sync",
+  "locale": "en",
+  "repository": "adventurer2008/obsidian-smart-sync-release-global",
+  "channel": "community",
+  "serviceOrigin": "https://sync.smartsync.cc",
+  "website": "https://smartsync.cc",
+  "privacyUrl": null,
+  "mailFrom": "admin@smartsync.cc",
+  "mailProfile": "global-pending-smtp",
+  "smtpVerified": false,
+  "hostingRegion": null,
+  "hostingRegionCandidates": ["singapore", "united-states"]
+}

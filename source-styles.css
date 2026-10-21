@@ -1,0 +1,184 @@
+.smart-sync-v2-preview {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	max-height: 60vh;
+	overflow: auto;
+}
+.smart-sync-common { display: flex; flex-wrap: wrap; column-gap: 0.5rem; }
+.setting-items.smart-sync-common > .setting-item { width: 100%; min-width: 0; box-sizing: border-box; order: 4; }
+.setting-items.smart-sync-common > .setting-item.smart-sync-title { border: 0; padding-bottom: 0; order: 0; }
+.smart-sync-title .setting-item-name { font-size: var(--h2-size); }
+.setting-items.smart-sync-common > .setting-item.smart-sync-version { border: 0; padding-top: 0.25rem; padding-bottom: 0.75rem; order: 1; }
+.smart-sync-version .setting-item-name { display: none; }
+.smart-sync-version .setting-item-description { white-space: pre-line; }
+.setting-items.smart-sync-common > .setting-item.smart-sync-overview-status { border: 0; padding: 0.5rem 0 0.75rem; order: 2; }
+.smart-sync-overview-status .setting-item-name { font-weight: var(--font-semibold); }
+.setting-items.smart-sync-common > .setting-item.smart-sync-overview-action { border: 0; padding: 0; flex: 0 1 auto; width: auto; margin: 0 0 0.75rem; order: 3; }
+.smart-sync-common .smart-sync-overview-action .setting-item-info { display: none; }
+.smart-sync-common .smart-sync-overview-action .setting-item-control { padding: 0; justify-content: flex-start; }
+.smart-sync-section {
+	margin-top: 0.75rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	overflow: hidden;
+}
+.smart-sync-section > summary { cursor: pointer; padding: 0.8rem 1rem; list-style-position: inside; }
+.smart-sync-summary-copy { display: inline-flex; flex-direction: column; vertical-align: middle; width: calc(100% - 1.5rem); }
+.smart-sync-section-title { font-weight: var(--font-semibold); }
+.smart-sync-section-description { font-size: var(--font-ui-smaller); color: var(--text-muted); margin-top: 0.2rem; }
+.smart-sync-section-body > .setting-item.smart-sync-fold-sentinel { display: none; }
+.smart-sync-section > summary:hover { background: var(--background-modifier-hover); }
+.smart-sync-section > summary:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
+.smart-sync-section[open] > summary { border-bottom: 1px solid var(--background-modifier-border); }
+.smart-sync-section > .smart-sync-section-body { padding: 0 1rem; }
+.smart-sync-section .setting-item-info { min-width: 0; }
+.smart-sync-section .setting-item-control { flex-wrap: wrap; }
+.smart-sync-section .smart-sync-scope-choice .setting-item-control { flex-wrap: nowrap; flex-shrink: 0; gap: 0.5rem; }
+@media (max-width: 650px) {
+	.smart-sync-section .setting-item { flex-wrap: wrap; gap: 0.5rem; }
+	.smart-sync-section .setting-item-control { width: 100%; justify-content: flex-start; }
+	.smart-sync-overview-action button { white-space: normal; height: auto; min-height: 2rem; }
+}
+.smart-sync-log-panel {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+}
+.smart-sync-logs {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	margin: 0;
+}
+.smart-sync-conflict-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+}
+@media (max-width: 650px) {
+	.smart-sync-conflict-grid { grid-template-columns: 1fr; }
+}
+
+/* CHG-20261017-15: decorative brand mark beside the accessible product title. */
+.smart-sync-title .setting-item-name { display: flex; align-items: center; gap: 0.75rem; }
+.smart-sync-title .setting-item-name::before {
+ content: ""; display: block; flex: 0 0 64px; width: 64px; height: 64px;
+ background: url('./assets/boundless-sync.png') center / contain no-repeat;
+}
+
+/* CHG-20261017-18: both brand names remain visible in every locale. */
+.smart-sync-title .setting-item-info { position: relative; padding-left: 80px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; }
+.smart-sync-title .setting-item-name::before { position: absolute; left: 0; top: 0; }
+.smart-sync-title .setting-item-description { display: block; margin-top: 0.25rem; color: var(--text-muted); font-size: var(--font-ui-small); }
+
+.smart-sync-overview-status .setting-item-description { white-space: pre-line; overflow-wrap: anywhere; }
+.setting-items.smart-sync-common > .setting-item.smart-sync-identity-row { order: 2; padding: 0.6rem 0; }
+.smart-sync-identity-row .setting-item-info { min-width: 0; }
+.smart-sync-identity-row .setting-item-description { overflow-wrap: anywhere; }
+.smart-sync-pairing-code {
+ color: #2563eb !important;
+ display: inline-block;
+ font-size: 1.6em !important;
+ font-weight: 800 !important;
+ letter-spacing: 0.14em;
+ line-height: 1.2;
+ text-align: center;
+}
+.setting-item-control input.smart-sync-pairing-code {
+ color: #2563eb !important;
+ font-size: 1.6em !important;
+ font-weight: 800 !important;
+ letter-spacing: 0.14em;
+ min-width: 12rem;
+ text-align: center;
+}
+.smart-sync-identity-row .setting-item-control { flex-wrap: wrap; gap: 0.5rem; }
+@media (max-width: 650px) {
+ .smart-sync-identity-row { flex-wrap: wrap; gap: 0.5rem; }
+ .smart-sync-identity-row .setting-item-control { width: 100%; justify-content: flex-start; }
+}
+
+/* CHG-20261017-31: keep the three task actions together, including narrow sidebars. */
+.smart-sync-task-actions { overflow-x: auto; flex-shrink: 0; }
+.smart-sync-task-actions > .setting-item { border: 0; padding: 0 0 0.5rem; }
+.smart-sync-task-actions .setting-item-info { display: none; }
+.smart-sync-task-actions .setting-item-control { flex: 1; justify-content: flex-start; flex-wrap: nowrap; gap: 0.5rem; }
+.smart-sync-task-actions button { flex-shrink: 0; white-space: nowrap; }
+.smart-sync-task-status { font-weight: 600; margin: 0.25rem 0 0.75rem; }
+
+.smart-sync-confirm-name { color: var(--text-error, #d93025); font-size: 20px; font-weight: 700; line-height: 1.5; margin: 12px 0; overflow-wrap: anywhere; user-select: text; }
+
+.smart-sync-note-pinned::after {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-inline-start: 0.35em;
+  flex-shrink: 0;
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23858585' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 3l5 5-4 1-4 4v4l-2 2-6-6 2-2h4l4-4z'/%3E%3Cpath d='M9 15l-6 6'/%3E%3C/svg%3E");
+}
+.wujie-note-search { display:flex; flex-direction:column; gap:10px; padding:14px 12px; overflow-y:auto; }
+.wujie-note-search > input[type="search"] { width:100%; flex-shrink:0; }
+.wujie-search-scope,.wujie-search-path,.wujie-search-time { color:var(--text-muted); font-size:var(--font-smallest); overflow-wrap:anywhere; }
+.wujie-search-toolbar { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+.wujie-search-toolbar > label { font-size:var(--font-smallest); display:flex; align-items:center; gap:4px; }
+.wujie-search-toolbar select { max-width:140px; }
+.wujie-search-toolbar details { flex:1; min-width:80px; }
+.wujie-search-toolbar summary { cursor:pointer; padding:5px 0; color:var(--text-muted); font-size:var(--font-ui-small); }
+.wujie-search-filters { display:flex; flex-direction:column; gap:10px; padding:12px 0; }
+.wujie-search-filters label { display:flex; flex-direction:column; gap:4px; font-size:var(--font-ui-small); }
+.wujie-search-filters input,.wujie-search-filters select { width:100%; max-width:100%; }
+.wujie-search-filters input[type="checkbox"] { width:auto; align-self:flex-start; }
+.wujie-search-dates { display:flex; flex-direction:column; gap:8px; }
+.wujie-search-dates[hidden] { display:none; }
+.wujie-search-chips { display:flex; flex-wrap:wrap; gap:4px; }
+.wujie-search-chips:empty { display:none; }
+.wujie-search-chips button { height:auto; white-space:normal; font-size:var(--font-smallest); padding:3px 7px; }
+.wujie-search-status { color:var(--text-muted); font-size:var(--font-ui-small); }
+.wujie-search-result { border-bottom:1px solid var(--background-modifier-border); padding:14px 0; display:flex; flex-direction:column; gap:6px; }
+.wujie-note-search .wujie-search-title,.wujie-note-search .wujie-search-snippet,.wujie-note-search .wujie-search-expand { background:none; box-shadow:none; border:none; height:auto; text-align:start; justify-content:flex-start; padding:0; white-space:normal; overflow-wrap:anywhere; line-height:1.6; }
+.wujie-note-search .wujie-search-title { font-weight:var(--font-semibold); font-size:var(--font-ui-medium); }
+.wujie-recent-files .wujie-search-scope { margin-bottom:6px; }
+.wujie-recent-files .wujie-search-result { padding:0; border:0; gap:0; }
+.wujie-recent-files .wujie-search-title { display:block; width:100%; min-height:30px; padding:4px 2px; font-weight:var(--nav-item-weight,400); font-size:var(--nav-item-size,var(--font-ui-small)); color:var(--nav-item-color,var(--text-normal)); line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.is-mobile .wujie-recent-files .wujie-search-title { min-height:44px; padding:10px 2px; }
+.wujie-note-search .wujie-search-snippet { color:var(--text-normal); font-size:var(--font-ui-small); display:block; }
+.wujie-note-search .wujie-search-expand { font-size:var(--font-smallest); color:var(--text-accent); }
+.wujie-note-search button:hover { color:var(--text-accent); }
+.wujie-note-search mark { color:var(--text-normal); background:rgba(255,196,0,.3); border-radius:2px; }
+.wujie-note-search button[hidden] { display:none; }
+
+/* R270: local note encryption, shared desktop and touch controls. */
+.wujie-crypto-form { display:flex; flex-direction:column; gap:12px; }
+.wujie-crypto-form label { display:flex; flex-direction:column; gap:6px; }
+.wujie-crypto-form input { width:100%; min-width:0; }
+.wujie-crypto-form p { color:var(--text-muted); font-size:var(--font-ui-small); line-height:1.6; }
+.wujie-encrypted { display:inline; max-width:100%; vertical-align:baseline; white-space:normal; border-radius:4px; }
+.wujie-encrypted > button { display:inline-flex; align-items:center; height:24px; min-height:0; padding:1px 7px; border:0; border-radius:4px; background:var(--background-secondary); color:var(--text-muted); box-shadow:none; font-size:var(--font-ui-small); vertical-align:baseline; }
+.wujie-encrypted > button:hover { background:var(--background-modifier-hover); color:var(--text-normal); }
+.wujie-encrypted > .wujie-crypto-more { display:none; width:20px; padding:0; justify-content:center; background:transparent; }
+.wujie-encrypted.is-open { background:transparent; border-bottom:1px dotted var(--text-faint); }
+.wujie-decrypted-text { display:inline; white-space:pre-wrap; overflow-wrap:anywhere; font-family:inherit; cursor:pointer; }
+.wujie-encrypted.is-whole-note,.wujie-encrypted.is-editing { display:block; }
+.wujie-encrypted.is-whole-note { margin-block:8px; }
+.wujie-encrypted.is-editing { padding:12px; border:1px solid var(--background-modifier-border); background:var(--background-primary); }
+.wujie-encrypted.is-editing > button { margin:8px 8px 0 0; }
+.wujie-crypto-sheet-actions { display:flex; flex-direction:column; gap:8px; }
+.wujie-crypto-sheet-actions button { width:100%; min-height:48px; justify-content:flex-start; border:0; box-shadow:none; background:var(--background-secondary); }
+.wujie-crypto-sheet-container { align-items:flex-end; padding:0; }
+.wujie-crypto-sheet-container .wujie-crypto-sheet { width:100%; max-width:100%; margin:0; border-radius:18px 18px 0 0; padding-bottom:max(20px,env(safe-area-inset-bottom)); max-height:80dvh; overflow-y:auto; }
+.wujie-crypto-editor { display:block; width:100%; min-width:220px; min-height:180px; max-height:60vh; resize:vertical; white-space:pre-wrap; font-size:var(--font-text-size); }
+.wujie-encryption-selection-tools { display:flex; justify-content:flex-end; padding:8px; flex-shrink:0; }
+.is-mobile .wujie-encrypted > button,.is-mobile .wujie-crypto-form button,.is-mobile .wujie-encryption-selection-tools button { min-height:44px; }
+.is-mobile .wujie-encrypted > .wujie-crypto-more { display:inline-flex; width:44px; }
+.is-mobile .wujie-crypto-editor { min-width:0; font-size:16px; }
+.smart-sync-device-list { display:flex; flex-direction:column; gap:12px; }
+.smart-sync-device-card { border:1px solid var(--background-modifier-border); border-radius:8px; padding:12px; overflow-wrap:anywhere; }
+.smart-sync-device-card > p { margin:0; line-height:1.6; }
+.smart-sync-device-card .setting-item { border:0; padding:8px 0 0; }
+.smart-sync-device-history { margin-top:16px; }
+.smart-sync-device-history > summary { cursor:pointer; color:var(--text-muted); }
+.smart-sync-device-history .smart-sync-device-card { margin-top:12px; }

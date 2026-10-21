@@ -1,0 +1,7 @@
+node_modules/
+artifacts/
+main.js
+local-test-data/
+*.log
+.env*
+*.sqlite*

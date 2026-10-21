@@ -1,0 +1,1358 @@
+import { t, formatStorageSize } from './i18n.js';
+import {
+	fingerprint,
+	inspectNote,
+	opaqueNoteId,
+	packNote,
+	repathNote,
+	safeNotePath,
+	unpackNote,
+	unpackToSink,
+} from './codec.js';
+import { mergeNote, rememberBase } from './merge.js';
+import { BATCH_BYTES } from './client.js';
+
+// Dirty state follows the connection across short-lived engine instances, including failed saves.
+const unsavedStates = new WeakSet();
+
+export function emptyState() {
+	return { format: 3, cursor: 0, notes: {}, conflicts: [] };
+}
+export function renamedFrom(path, renames) {
+	const source = Object.keys(renames)
+		.filter((to) => path === to || path.startsWith(`${to}/`))
+		.sort((a, b) => b.length - a.length)[0];
+	return source ? `${renames[source]}${path.slice(source.length)}` : undefined;
+}
+function renameSources(path, renames) {
+	return Object.keys(renames)
+		.filter(to => path === to || path.startsWith(`${to}/`))
+		.map(to => `${renames[to]}${path.slice(to.length)}`);
+}
+function renameDestinations(path, renames) {
+	return [...new Set(Object.entries(renames)
+		.filter(([, from]) => path === from || path.startsWith(`${from}/`))
+		.map(([to, from]) => `${to}${path.slice(from.length)}`))];
+}
+export function recordRename(renames, from, to, knownPaths = []) {
+	const has = path => knownPaths instanceof Set ? knownPaths.has(path) : knownPaths.includes(path);
+	if (renamedFrom(to, renames) === from) return;
+	const inherited = renamedFrom(from, renames);
+	const origin = has(from) ? from : (inherited ?? from);
+	// An earlier folder rename may already be committed for only some children.
+	// Preserve the unsent children's original identities when the parent moves again.
+	if (inherited && inherited !== origin)
+		for (const path of knownPaths)
+			if (path.startsWith(`${inherited}/`) && !has(`${from}${path.slice(inherited.length)}`))
+				renames[`${to}${path.slice(inherited.length)}`] = path;
+	for (const path of Object.keys(renames))
+		if (path === from || path.startsWith(`${from}/`)) {
+			const old = has(path) ? path : renames[path];
+			delete renames[path];
+			renames[`${to}${path.slice(from.length)}`] = old;
+		}
+	delete renames[from];
+	renames[to] = origin;
+	for (const path of Object.keys(renames))
+		if (path.startsWith(`${to}/`) && renames[path] === `${origin}${path.slice(to.length)}`)
+			delete renames[path];
+}
+export function pendingAttachment(notes, href, source = '') {
+	if (typeof href !== 'string' || /^[a-z][a-z0-9+.-]*:/i.test(href)) return undefined;
+	try {
+		const raw = decodeURIComponent(href.split('#')[0].split('|')[0]),
+			parent = source.split('/').slice(0, -1),
+			parts = [...parent];
+		for (const item of raw.split('/')) {
+			if (item === '..') {
+				if (!parts.length) return undefined;
+				parts.pop();
+			} else if (item && item !== '.') parts.push(item);
+		}
+		const path = safeNotePath(parts.join('/'));
+		const matches = Object.entries(notes).filter(
+			([, note]) =>
+				!note.removed &&
+				!note.downloaded &&
+				!note.path.toLowerCase().endsWith('.md') &&
+				(note.path === path || note.path === raw),
+		);
+		return matches.length === 1 ? matches[0] : undefined;
+	} catch {
+		return undefined;
+	}
+}
+function validEntry(entry, previous) {
+	return (
+		entry &&
+		Number.isSafeInteger(entry.sequence) &&
+		entry.sequence > previous &&
+		/^[a-f0-9]{64}$/.test(entry.note) &&
+		/^[a-f0-9]{64}$/.test(entry.manifest) &&
+		typeof entry.removed === 'boolean'
+	);
+}
+function renameConflict(message) {
+	const error = new Error(message);
+	error.code = 'RENAME_CONFLICT';
+	return error;
+}
+export class NotebookSynchronizer {
+	#running;
+	#active;
+	#batching = false;
+	#pendingSaves = 0;
+	#completed = [];
+	#savedAt = 0;
+	#cachedObjects = new Map();
+	#windowManifests = new Map();
+	#prefetchedInfo = new Map();
+	#queuedUploads = [];
+	#contentPoll;
+	#bulkRemoved = new Set();
+	constructor({
+		api,
+		keys,
+		host,
+		state = emptyState(),
+		save,
+		ignored = [],
+		attachmentLimit = Infinity,
+		direction = 'both',
+		accepts = () => true,
+		renames = {},
+		onProgress = () => {},
+		onTask = async () => {},
+		remoteMode = 'both',
+		checkpointSize = 1,
+		checkpointInterval = 500,
+		onTiming,
+		snapshotBeforeSave = true,
+		uploadConcurrency = 1,
+		batchTransfer = false,
+		batchDeletes = false,
+		batchBytes = 2 * 1024 * 1024,
+		batchFiles = 64,
+		batchWaitMs = 250,
+		beforeDelete = async () => {},
+		yieldWork = async () => {},
+		contentPriorities = new Map(),
+		scanCache,
+		scanVersion,
+		saveRequired = false,
+	}) {
+		if (
+			state.format !== 3 ||
+			!Number.isSafeInteger(state.cursor) ||
+			state.cursor < 0 ||
+			!state.notes ||
+			!Array.isArray(state.conflicts)
+		)
+			throw new Error('Unsupported local synchronization state');
+		if (!['both', 'receive', 'send', 'paused', 'update'].includes(direction))
+			throw new Error('Unknown synchronization direction');
+		if (!Number.isInteger(uploadConcurrency) || uploadConcurrency < 1 || uploadConcurrency > 4)
+			throw new Error('Upload concurrency must be between one and four');
+		if (!Number.isInteger(batchBytes) || batchBytes < 256 * 1024 || batchBytes > BATCH_BYTES || !Number.isInteger(batchWaitMs) || batchWaitMs < 0 || batchWaitMs > 1000)
+			throw new Error('Invalid transfer batch bounds');
+		if (!Number.isInteger(batchFiles) || batchFiles < 1 || batchFiles > 128) throw new Error('Invalid transfer batch file count');
+		Object.assign(this, {
+			contentPriorities,
+			scanCache,
+			scanVersion,
+			remoteMode,
+			checkpointSize,
+			checkpointInterval,
+			onTiming,
+			snapshotBeforeSave,
+			uploadConcurrency,
+			batchTransfer,
+			batchDeletes,
+			batchBytes,
+			batchFiles,
+			batchWaitMs,
+			beforeDelete,
+			yieldWork,
+			api,
+			keys,
+			host,
+			state,
+			save,
+			ignored,
+			attachmentLimit,
+			direction,
+			accepts,
+			renames,
+			onProgress,
+			onTask,
+		});
+		if (
+			!this.state.localIndex ||
+			typeof this.state.localIndex !== 'object' ||
+			Array.isArray(this.state.localIndex)
+		)
+			{ this.state.localIndex = {}; unsavedStates.add(this.state); }
+		if (saveRequired) unsavedStates.add(this.state);
+	}
+	async timed(stage, work) {
+		const started = performance.now();
+		try { return await work(); }
+		finally { try { this.onTiming?.(stage, performance.now() - started); } catch { /* Measurement cannot fail synchronization. */ } }
+	}
+	assertActive() {
+		if (this.api.signal?.aborted) throw new DOMException('Synchronization stopped', 'AbortError');
+	}
+	async localFile(path, fresh = false) {
+		const mtime = await this.host.mtime?.(path);
+		const stamp = await this.host.stamp?.(path);
+		const cached = Object.hasOwn(this.state.localIndex, path) && this.state.localIndex[path];
+		if (
+			!fresh &&
+			typeof stamp === 'string' &&
+			cached?.stamp === stamp &&
+			/^[a-f0-9]{64}$/.test(cached.digest) &&
+			Number.isSafeInteger(cached.size) &&
+			cached.size >= 0
+		)
+			return { digest: cached.digest, size: cached.size, mtime };
+		const contents = await this.host.read(path);
+		this.assertActive();
+		if (contents === null) {
+			if (Object.hasOwn(this.state.localIndex, path)) unsavedStates.add(this.state);
+			delete this.state.localIndex[path];
+			return null;
+		}
+		const digest = await this.timed('hash', () => fingerprint(contents));
+		if (typeof stamp === 'string') {
+			if (stamp !== (await this.host.stamp(path)))
+				throw Object.assign(new Error('Source changed during inspection'), {
+					code: 'PLAN_CHANGED',
+				});
+			unsavedStates.add(this.state);
+			Object.defineProperty(this.state.localIndex, path, {
+				value: { stamp, digest, size: contents.length },
+				writable: true,
+				enumerable: true,
+				configurable: true,
+			});
+		} else { if (Object.hasOwn(this.state.localIndex, path)) unsavedStates.add(this.state); delete this.state.localIndex[path]; }
+		return { digest, size: contents.length, contents, mtime };
+	}
+	excluded(path) {
+		return (
+			path === 'Smart Sync conflicts' ||
+			path.startsWith('Smart Sync conflicts/') ||
+			!this.accepts(path) ||
+			this.ignored.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+		);
+	}
+	run(target, ceiling) {
+		if (this.#running) return this.#running;
+		this.#batching = true;
+		this.#running = this.#cycle(target, ceiling)
+			.then(() => this.#flush())
+			.catch(async (error) => {
+				unsavedStates.add(this.state);
+				if (this.scanCache) this.scanCache.state = undefined;
+				for (const job of this.#queuedUploads.splice(0))
+					await this.onTask({ ...job.task, status: 'failed', error }).catch(() => {});
+				for (const task of this.#completed.splice(0))
+					await this.onTask({ ...task, status: 'failed', error }).catch(() => {});
+				throw error;
+			})
+			.finally(() => {
+				this.#cachedObjects.clear();
+				this.#windowManifests.clear();
+				this.#prefetchedInfo.clear();
+				this.#contentPoll = undefined;
+				this.#batching = false;
+				this.#running = undefined;
+			});
+		return this.#running;
+	}
+	async #task(event, work) {
+		if (this.#completed.length && (this.#completed.some(task => task.direction !== event.direction) || Date.now() - this.#savedAt >= this.checkpointInterval)) await this.#flush();
+		const prior = this.#active;
+		const task = { ...event, token: crypto.randomUUID(), bytes: 0, total: 0, status: 'running', workStartedAt: performance.now() };
+		this.#active = task;
+		try {
+			await this.onTask({ ...task });
+			const result = await work();
+			if (result === 'staged') return result;
+			const completed = { ...task, status: result ?? 'done', workMilliseconds: Math.max(0, performance.now() - task.workStartedAt), completedAt: performance.now() };
+			if (this.#batching && this.checkpointSize > 1) this.#completed.push(completed);
+			else await this.onTask(completed);
+			return result;
+		} catch (error) {
+			await this.onTask({ ...task, status: 'failed', error }).catch(() => {});
+			throw error;
+		} finally {
+			this.#active = prior;
+		}
+	}
+	async #load(address) {
+		this.assertActive();
+		const task = this.#active,
+			before = task?.bytes ?? 0;
+		if (this.#cachedObjects.has(address)) {
+			const bytes = this.#cachedObjects.get(address);
+			this.#cachedObjects.delete(address);
+			if (task) {
+				task.bytes += bytes.length;
+				task.total = Math.max(task.total, task.bytes);
+				await this.onTask({ ...task, status: 'progress' });
+			}
+			return bytes;
+		}
+		if (this.#windowManifests.has(address)) return this.#windowManifests.get(address);
+		const bytes = await this.timed('download', () => this.api.load(address, ({ loaded, total }) => {
+			if (!task) return;
+			task.bytes = before + loaded;
+			task.total = Math.max(task.total, before + total, task.bytes);
+			void this.onTask({ ...task, status: 'progress' }).catch(() => {});
+		}));
+		if (task) {
+			task.bytes = before + bytes.length;
+			task.total = Math.max(task.total, task.bytes);
+			await this.onTask({ ...task, status: 'progress' });
+		}
+		return bytes;
+	}
+	#alreadyApplied(entry) {
+		const previous = this.state.notes[entry.note];
+		return (previous?.revision ?? 0) >= entry.sequence &&
+			(previous.revision !== entry.sequence || previous.downloaded || previous.removed || entry.removed || this.excluded(previous.path));
+	}
+	async #prefetch(entries) {
+		this.#cachedObjects.clear();
+		this.#prefetchedInfo.clear();
+		if (!this.batchTransfer || typeof this.api.loadBatch !== 'function') return entries.length;
+		const live = entries.filter(entry => !entry.removed && !this.#alreadyApplied(entry));
+		if (!live.length) { this.#windowManifests.clear(); return entries.length; }
+		try {
+			const wanted = new Set(live.map(entry => entry.manifest));
+			for (const address of this.#windowManifests.keys()) if (!wanted.has(address)) this.#windowManifests.delete(address);
+			const manifests = new Map(this.#windowManifests);
+			const missing = [...wanted].filter(address => !manifests.has(address));
+			const remaining = this.batchBytes - 128 * 1024 - [...manifests.values()].reduce((sum, body) => sum + body.length, 0);
+			if (missing.length && remaining < 1024) { this.#windowManifests.clear(); return 1; }
+			if (missing.length) for (const [address, body] of await this.timed('download', () => this.api.loadBatch(missing, remaining))) manifests.set(address, body);
+			this.#windowManifests.clear();
+			let metadataBudget = 128 * 1024;
+			for (const [address, body] of manifests) if (body.length <= metadataBudget) { this.#windowManifests.set(address, body); metadataBudget -= body.length; }
+			this.#cachedObjects = manifests;
+			let available = this.batchBytes - 128 * 1024 - [...manifests.values()].reduce((sum, body) => sum + body.length, 0);
+			const pieces = new Set();
+			let covered = 0;
+			for (const entry of entries) {
+				if (entry.removed || this.#alreadyApplied(entry)) { covered++; continue; }
+				if (!manifests.has(entry.manifest)) break;
+				let info;
+				try { info = await inspectNote(this.keys, this.api.workspace, entry.note, entry.manifest, async address => manifests.get(address)); }
+				catch { covered++; continue; } // The ordinary per-file task performs and reports the integrity failure.
+				this.#prefetchedInfo.set(entry.note + entry.manifest, info);
+				const previous = this.state.notes[entry.note];
+				// Reuse the local body for path-only revisions. The receive path still
+				// checks local content and fetches on demand if it is absent or changed.
+				if (previous?.downloaded && !previous.removed && previous.digest === info.digest) { covered++; continue; }
+				if (this.excluded(info.path) || info.bytes > Math.min(4 * 1024 * 1024, this.batchBytes - 128 * 1024) || (!info.path.toLowerCase().endsWith('.md') && info.bytes > this.attachmentLimit)) { covered++; continue; }
+				// A reconnect may retain the latest local bytes without its prior
+				// checkpoint. Let receive verify them before fetching any body;
+				// different or disappearing files still fetch through the normal path.
+				if (!previous && this.host.exists && await this.host.exists(info.path)) { covered++; continue; }
+				const required = info.segments.filter(piece => !pieces.has(piece.address)).reduce((sum, piece) => sum + piece.bytes + 256, 0);
+				if (required > available) break;
+				for (const piece of info.segments) {
+					if (!pieces.has(piece.address) && piece.bytes + 256 <= available) { pieces.add(piece.address); available -= piece.bytes + 256; }
+				}
+				covered++;
+			}
+			if (pieces.size) for (const [address, bytes] of await this.timed('download', () => this.api.loadBatch([...pieces], this.batchBytes))) this.#cachedObjects.set(address, bytes);
+			return Math.max(1, covered);
+		} catch (error) {
+			this.#cachedObjects.clear();
+			this.#windowManifests.clear();
+			this.#prefetchedInfo.clear();
+			if (error?.status === 401 || error?.status === 403 || error?.name === 'AbortError') throw error;
+			return 1;
+		}
+	}
+	async #persist() {
+		unsavedStates.add(this.state);
+		this.#pendingSaves++;
+		if (
+			!this.#batching ||
+			this.#pendingSaves >= this.checkpointSize ||
+			Date.now() - this.#savedAt > this.checkpointInterval
+		)
+			await this.#flush();
+	}
+	async #flush() {
+		if (!unsavedStates.has(this.state) && !this.#completed.length) return;
+		await this.save(this.snapshotBeforeSave ? structuredClone(this.state) : this.state);
+		unsavedStates.delete(this.state);
+		this.#pendingSaves = 0;
+		this.#savedAt = Date.now();
+		for (const task of this.#completed.splice(0)) await this.onTask({ ...task, checkpointMilliseconds: Math.max(0, performance.now() - task.completedAt) });
+	}
+	async #preserve(path, contents, sequence) {
+		const digest = await fingerprint(contents);
+		const split = path.lastIndexOf('.');
+		const stem = split > path.lastIndexOf('/') ? path.slice(0, split) : path;
+		const extension = split > path.lastIndexOf('/') ? path.slice(split) : '';
+		const copy =
+			this.host.conflictPath?.(path, sequence, digest) ??
+			`${stem}.conflict-${sequence}-${digest.slice(0, 12)}${extension}`;
+		const prior = await this.host.read(copy);
+		if (prior === null) await this.host.write(copy, contents);
+		else if ((await fingerprint(prior)) !== digest)
+			throw new Error('Conflict copy name is already occupied');
+		if (!this.state.conflicts.some((entry) => entry.copy === copy))
+			this.state.conflicts.push({ path, copy, sequence });
+	}
+	async #receive(entry, force = false) {
+		const previous = this.state.notes[entry.note];
+		if ((previous?.revision ?? 0) >= entry.sequence && !force) {
+			if (
+				previous.revision !== entry.sequence ||
+				previous.downloaded ||
+				previous.removed ||
+				entry.removed ||
+				this.excluded(previous.path)
+			)
+				return;
+			const info = await inspectNote(
+				this.keys,
+				this.api.workspace,
+				entry.note,
+				entry.manifest,
+				(address) => this.#load(address),
+			);
+			if (info.kind === 'folder' || (!info.path.startsWith('__smart_sync_configuration__/') && (this.attachmentLimit === 0 || info.bytes > this.attachmentLimit))) return;
+		}
+		return this.#task({ note: entry.note, direction: 'receive' }, async () => {
+			await this.#receiveCore(entry, force);
+			// The feed loop persists the file and its new cursor together.
+			if (!this.#batching || this.checkpointSize === 1) await this.#persist();
+			if (!this.#active.path || this.excluded(this.#active.path)) return 'skipped';
+			if (!entry.removed && !this.state.notes[entry.note]?.downloaded) return 'deferred';
+		});
+	}
+	async #receiveCore(entry, force) {
+		this.assertActive();
+		if (entry.removed && this.#bulkRemoved.has(entry.note)) {
+			const prior = this.state.notes[entry.note];
+			this.#active.path = prior.path;
+			this.state.notes[entry.note] = { ...prior, revision: entry.sequence, removed: true, downloaded: false, manifest: entry.manifest };
+			return;
+		}
+		const load = (address) => this.#load(address);
+		const infoKey = entry.note + entry.manifest;
+		const info = this.#prefetchedInfo.get(infoKey) ?? await inspectNote(this.keys, this.api.workspace, entry.note, entry.manifest, load);
+		this.#prefetchedInfo.delete(infoKey);
+		if (this.excluded(info.path)) return;
+		const previous = this.state.notes[entry.note];
+		const cloudPath = info.path;
+		// A parent move can update the physical path before this child's manifest.
+		// Delete its tracked location directly; a tombstone must never move it back.
+		if (entry.removed && previous && !previous.removed && previous.downloaded && !this.excluded(previous.path)) info.path = previous.path;
+		delete this.state.localIndex[info.path];
+		if (previous) delete this.state.localIndex[previous.path];
+		this.#active.path = cloudPath;
+		if (
+			this.direction === 'update' &&
+			(info.kind === 'folder' || (previous && previous.path !== cloudPath))
+		) {
+			this.state.notes[entry.note] = {
+				path: cloudPath,
+				kind: info.kind,
+				revision: entry.sequence,
+				digest: info.digest,
+				downloaded: false,
+				removed: entry.removed,
+				manifest: entry.manifest,
+			};
+			return;
+		}
+		if (previous && previous.path !== cloudPath && !entry.removed && Object.keys(this.renames).length) {
+			const pending = [];
+			for (const path of renameDestinations(previous.path, this.renames))
+				if (path !== cloudPath && !this.excluded(path) && (this.host.exists ? await this.host.exists(path) : await this.host.read(path) !== null)) pending.push(path);
+			if (pending.length === 1 && renameSources(pending[0], this.renames).includes(cloudPath))
+				info.path = pending[0];
+			else if (pending.length)
+				throw renameConflict('Concurrent renames require choosing one destination before retrying');
+		}
+		// Receive content at a locally renamed path before publishing that pending rename.
+		// In particular, a remote edit must not recreate the old path and lose the local move.
+		if (previous && previous.path === cloudPath && !entry.removed && Object.keys(this.renames).length) {
+			const candidates = [];
+			for (const path of renameDestinations(cloudPath, this.renames))
+				if (path !== cloudPath && !this.excluded(path) && !Object.entries(this.state.notes).some(([id, note]) => id !== entry.note && !note.removed && note.path === path) && (this.host.exists ? await this.host.exists(path) : await this.host.read(path) !== null)) candidates.push(path);
+			if (candidates.length === 1) info.path = candidates[0];
+		}
+		try {
+			// Never overwrite an unrelated destination. A failed host move leaves the cursor unchanged.
+			if (
+				previous &&
+				!entry.removed &&
+				!previous.removed &&
+				previous.path !== info.path &&
+				!this.excluded(previous.path)
+			) {
+				const exists = (path) =>
+					this.host.exists
+						? this.host.exists(path)
+						: this.host.read(path).then((bytes) => bytes !== null);
+				if (await exists(previous.path)) {
+					if ((await exists(info.path)) && !(await this.host.sameEntry?.(previous.path, info.path)))
+						throw renameConflict(`Rename destination is occupied: ${info.path}`);
+					if (this.host.move) {
+						await this.host.move(previous.path, info.path);
+						if (info.kind === 'folder') {
+							// The physical move includes every child. Reflect that locally now,
+							// so a partially published remote rename cannot look like new uploads.
+							for (const note of Object.values(this.state.notes))
+								if (!note.removed && note.path.startsWith(`${previous.path}/`))
+									note.path = `${info.path}${note.path.slice(previous.path.length)}`;
+						}
+					}
+					else if (info.kind === 'file') {
+						const mtime = (await this.host.mtime?.(previous.path)) ?? info.mtime;
+						const bytes = await this.host.read(previous.path);
+						this.assertActive();
+						await this.host.write(info.path, bytes, mtime);
+						await this.host.remove(previous.path);
+					}
+				}
+			}
+			if (info.kind === 'folder') {
+				if (entry.removed) await this.host.removeFolder?.(info.path);
+				else await this.host.mkdir?.(info.path);
+				this.state.notes[entry.note] = {
+					path: info.path,
+					kind: 'folder',
+					revision: entry.sequence,
+					digest: info.digest,
+					downloaded: !entry.removed,
+					removed: entry.removed,
+					manifest: entry.manifest,
+				};
+				return;
+			}
+			const local = await this.host.read(info.path);
+			if (this.direction === 'update' && (local === null || entry.removed)) {
+				this.state.notes[entry.note] = {
+					path: info.path,
+					revision: entry.sequence,
+					digest: info.digest,
+					downloaded: local !== null,
+					removed: entry.removed,
+					manifest: entry.manifest,
+					origin: info.origin,
+				};
+				return;
+			}
+			const localDigest = local === null ? undefined : await fingerprint(local);
+			const dirty = local !== null && localDigest !== previous?.digest;
+			if (entry.removed) {
+				if (dirty) await this.#preserve(info.path, local, entry.sequence);
+				if (local !== null) await this.host.remove(info.path);
+				this.state.notes[entry.note] = {
+					path: info.path,
+					revision: entry.sequence,
+					removed: true,
+					downloaded: false,
+				};
+				return;
+			}
+			if (local !== null && localDigest === info.digest) {
+				if (info.mtime !== undefined && this.host.mtime && await this.host.mtime(info.path) !== info.mtime)
+					await this.host.write(info.path, local, info.mtime);
+				this.state.notes[entry.note] = {
+					path: info.path,
+					revision: entry.sequence,
+					digest: info.digest,
+					downloaded: true,
+					removed: false,
+					manifest: entry.manifest,
+					origin: info.origin,
+				};
+				rememberBase(this.state, entry.note, local);
+				return;
+			}
+			let decoded;
+			if (
+				dirty &&
+				local.length <= 262144 &&
+				info.bytes <= 262144 &&
+				info.path.toLowerCase().endsWith('.md') &&
+				typeof previous?.base === 'string'
+			) {
+				decoded = await unpackNote(this.keys, this.api.workspace, entry.note, entry.manifest, load, info, this.onTiming);
+				const merged = mergeNote(previous.base, local, decoded.contents);
+				if (merged !== undefined) {
+					await this.host.write(info.path, merged);
+					this.state.notes[entry.note] = {
+						path: info.path,
+						revision: entry.sequence,
+						digest: info.digest,
+						downloaded: true,
+						removed: false,
+						manifest: entry.manifest,
+						origin: info.origin,
+					};
+					rememberBase(this.state, entry.note, decoded.contents);
+					return;
+				}
+			}
+			if (dirty) await this.#preserve(info.path, local, entry.sequence);
+			const wantsBytes =
+				force || info.path.toLowerCase().endsWith('.md') || info.path.startsWith('__smart_sync_configuration__/') || (this.attachmentLimit > 0 && info.bytes <= this.attachmentLimit);
+			if (wantsBytes) {
+				if (
+					this.host.sink &&
+					info.bytes > 8 * 1024 * 1024 &&
+					!info.path.startsWith('__smart_sync_configuration__/')
+				) {
+					await unpackToSink(
+						this.keys,
+						this.api.workspace,
+						entry.note,
+						entry.manifest,
+						load,
+						(_, bytes, digest, mtime) => { this.assertActive(); return this.host.sink(info.path, bytes, digest, mtime); },
+						info,
+						this.onTiming,
+					);
+				} else {
+					const file =
+						decoded ??
+						(await unpackNote(this.keys, this.api.workspace, entry.note, entry.manifest, load, info, this.onTiming));
+					this.assertActive();
+					await this.host.write(info.path, file.contents, info.mtime);
+					decoded = file;
+				}
+			} else if (local !== null) {
+				// Do not overwrite existing bytes with an attachment placeholder or stale content.
+				await this.host.remove(info.path);
+			}
+			this.state.notes[entry.note] = {
+				path: info.path,
+				revision: entry.sequence,
+				digest: info.digest,
+				downloaded: wantsBytes,
+				removed: false,
+				manifest: entry.manifest,
+				origin: info.origin,
+			};
+			if (decoded) rememberBase(this.state, entry.note, decoded.contents);
+		} finally {
+			if (info.path !== cloudPath && this.state.notes[entry.note])
+				this.state.notes[entry.note].path = cloudPath;
+		}
+	}
+	async #removeCompleteTrees(changes) {
+		this.#bulkRemoved.clear();
+		if (!this.host.removeTree || this.direction === 'update') return;
+		const heads = new Map(), counts = new Map();
+		for (const entry of changes) { heads.set(entry.note, entry); counts.set(entry.note, (counts.get(entry.note) ?? 0) + 1); }
+		const folders = changes.filter(entry => entry.removed && this.state.notes[entry.note]?.kind === 'folder').sort((a,b) => this.state.notes[a.note].path.length - this.state.notes[b.note].path.length);
+		if (!folders.length) return;
+		const files = await this.host.list(), dirs = await this.host.listFolders?.() ?? [];
+		const known = new Map(Object.entries(this.state.notes).filter(([,note]) => !note.removed).map(([id,note]) => [note.path, [id,note]]));
+		for (const entry of folders) {
+			if (this.#bulkRemoved.has(entry.note)) continue;
+			const root = this.state.notes[entry.note].path;
+			if (this.host.exists && !await this.host.exists(root)) continue;
+			const paths = [...new Set([root,...files.filter(path => path.startsWith(`${root}/`)),...dirs.filter(path => path.startsWith(`${root}/`))])];
+			const stamps = [], ids = [];
+			let safe = true;
+			for (const path of paths) {
+				const item = known.get(path), head = item && heads.get(item[0]);
+				if (this.excluded(path) || !item || !head?.removed || head.manifest !== item[1].manifest || counts.get(item[0]) !== 1) { safe = false; break; }
+				ids.push(item[0]);
+				if (item[1].kind !== 'folder') {
+					const before = await this.host.stamp?.(path), bytes = await this.host.read(path);
+					if (bytes === null || await fingerprint(bytes) !== item[1].digest) { safe = false; break; }
+					stamps.push([path,before]);
+				}
+			}
+			if (!safe) continue;
+			const current = [...new Set([root,...(await this.host.list()).filter(path => path.startsWith(`${root}/`)),...((await this.host.listFolders?.()) ?? []).filter(path => path.startsWith(`${root}/`))])];
+			if (current.length !== paths.length || current.some(path => !known.has(path))) continue;
+			for (const [path, stamp] of stamps) {
+				if (typeof stamp === 'string') { if (stamp !== await this.host.stamp(path)) safe = false; }
+				else { const bytes = await this.host.read(path); if (bytes === null || await fingerprint(bytes) !== known.get(path)[1].digest) safe = false; }
+				if (!safe) break;
+			}
+			if (safe && await this.host.removeTree(root, paths)) for (const id of ids) this.#bulkRemoved.add(id);
+		}
+	}
+	#treeDeletions() {
+		return this.state.pendingTreeDeletions ??= {};
+	}
+	#heldTree(note) {
+		return Object.values(this.#treeDeletions()).find(tree => tree.members.includes(note));
+	}
+	#heldPath(path) {
+		return Object.values(this.#treeDeletions()).some(tree => path === tree.path || path.startsWith(tree.path + '/'));
+	}
+	async #stageTreeDeletions(changes) {
+		if (!this.host.removeTree || this.direction === 'update') return;
+		const pending = this.#treeDeletions(), heads = new Map(changes.map(entry => [entry.note,entry]));
+		const roots = changes.filter(entry => entry.removed && this.state.notes[entry.note]?.kind === 'folder')
+			.sort((a,b) => this.state.notes[a.note].path.length - this.state.notes[b.note].path.length);
+		for (const entry of roots) {
+			if (this.#heldTree(entry.note)) continue;
+			const prior = this.state.notes[entry.note];
+			if (prior.removed || this.excluded(prior.path)) continue;
+			const members = Object.entries(this.state.notes).filter(([,note]) => !note.removed &&
+				(note.path === prior.path || note.path.startsWith(prior.path + '/')));
+			if (members.some(([,note]) => this.excluded(note.path)) || members.every(([id]) => heads.get(id)?.removed)) continue;
+			pending[entry.note] = { path:prior.path, members:members.map(([id]) => id), entries:{}, startedAt:Date.now() };
+			unsavedStates.add(this.state);
+			await this.#task({note:entry.note,direction:'receive',path:prior.path},async()=> 'deferred');
+		}
+	}
+	async #finishTreeDeletions() {
+		const pending = this.#treeDeletions();
+		for (const [id,tree] of Object.entries(pending)) {
+			const entries = Object.values(tree.entries).sort((a,b) => a.sequence-b.sequence);
+			const complete = tree.members.every(note => tree.entries[note]?.removed || this.state.notes[note]?.removed);
+			const cancelled = entries.some(entry => !entry.removed);
+			if (!complete && !cancelled && Date.now()-tree.startedAt < 300000) continue;
+			if (complete && !cancelled) await this.#removeCompleteTrees(entries);
+			for (const entry of entries) if (!this.#alreadyApplied(entry)) {
+				await this.#receive(entry);
+				await this.#persist();
+			}
+			const live = new Set(Object.values(this.state.notes).filter(note=>!note.removed).map(note=>note.path));
+			for (const entry of entries.map(entry=>this.state.notes[entry.note]).filter(note=>note?.removed && note.kind==='folder' && !live.has(note.path)).sort((a,b)=>b.path.length-a.path.length))
+				await this.host.removeFolder?.(entry.path);
+			delete pending[id];
+			unsavedStates.add(this.state);
+			await this.#persist();
+		}
+	}
+	async #receiveContent(entries) {
+		const paths = [];
+		for (const entry of new Map(entries.map(item => [item.note, item])).values()) {
+			const previous = this.state.notes[entry.note];
+			if (entry.removed || !previous?.downloaded || previous.removed || (previous.kind ?? 'file') !== 'file' ||
+				this.#alreadyApplied(entry) || this.excluded(previous.path) || this.#heldPath(previous.path)) continue;
+			this.assertActive();
+			let manifest = this.#windowManifests.get(entry.manifest);
+			if (!manifest && this.batchTransfer && typeof this.api.loadBatch === 'function' && this.batchBytes >= 256 * 1024) {
+				try { manifest = (await this.timed('download', () => this.api.loadBatch([entry.manifest], this.batchBytes - 128 * 1024))).get(entry.manifest); }
+				catch (error) { if ([401, 403].includes(error?.status) || error?.name === 'AbortError') throw error; }
+			}
+			manifest ??= await this.api.load(entry.manifest);
+			const info = await inspectNote(this.keys, this.api.workspace, entry.note, entry.manifest, async () => manifest);
+			if (manifest.length <= 128 * 1024) {
+				let retained = [...this.#windowManifests.values()].reduce((sum, body) => sum + body.length, 0);
+				for (const [address, body] of this.#windowManifests) {
+					if (retained + manifest.length <= 128 * 1024) break;
+					this.#windowManifests.delete(address); retained -= body.length;
+				}
+				this.#windowManifests.set(entry.manifest, manifest);
+			}
+			// Paths and deletions keep their dependency order; only existing file content jumps the queue.
+			if (info.path !== previous.path || info.kind === 'folder' || info.digest === previous.digest) continue;
+			this.#prefetchedInfo.set(entry.note + entry.manifest, info);
+			await this.#receive(entry);
+			await this.#persist();
+			paths.push(previous.path);
+		}
+		return paths;
+	}
+	async #prioritizeContent() {
+		if (['receive', 'paused'].includes(this.direction) || ['receive', 'paused'].includes(this.remoteMode)) return [];
+		const selected = [...this.contentPriorities].slice(0, 16);
+		if (!selected.length) return [];
+		this.assertActive();
+		await this.#send(undefined, undefined, undefined, false, selected.map(([path]) => path).filter(path => !renameSources(path, this.renames).length));
+		for (const [path, generation] of selected)
+			if (this.contentPriorities.get(path) === generation) this.contentPriorities.delete(path);
+		return selected.map(([path]) => path);
+	}
+	async #cycle(target, ceiling) {
+		this.#bulkRemoved.clear();
+		const targets = target ? new Set(Array.isArray(target) ? target : [target]) : undefined;
+		if (this.direction === 'paused' || this.remoteMode === 'paused') return;
+		this.assertActive();
+		const version = this.scanVersion?.();
+		let remoteChanged = false;
+		const receivedRemovals = new Set();
+		if (this.direction !== 'send' && this.remoteMode !== 'send') {
+			const changes = [];
+			let replayCursorDirty = false;
+			let cursor = this.state.cursor;
+			for (;;) {
+				const batch = await this.api.feed(cursor);
+				if (
+					!batch ||
+					!Array.isArray(batch.entries) ||
+					typeof batch.more !== 'boolean' ||
+					(batch.more && batch.entries.length === 0)
+				)
+					throw new Error('Invalid change feed');
+				for (const entry of batch.entries) {
+					if (ceiling !== undefined && entry.sequence > ceiling)
+						throw Object.assign(new Error('Plan changed'), { code: 'PLAN_CHANGED' });
+					if (!validEntry(entry, cursor)) throw new Error('Invalid change sequence');
+					remoteChanged = true;
+					cursor = entry.sequence;
+					changes.push(entry);
+				}
+				if (!batch.more) break;
+			}
+			// Read all pages before applying: historical intermediate paths can be
+			// occupied by the latest files retained across a reconnect. Only each
+			// note's newest validated revision describes the desired remote state.
+			const heads = new Map(changes.map((entry) => [entry.note, entry]));
+			const current = changes.filter(entry => heads.get(entry.note) === entry);
+			await this.beforeDelete(
+				[...heads.values()].filter(
+					(entry) =>
+						entry.removed && (this.state.notes[entry.note]?.revision ?? 0) < entry.sequence,
+				).length,
+				{ direction: 'receive' },
+			);
+			if (!targets && ceiling === undefined) {
+				await this.#receiveContent(current);
+				this.#contentPoll = async () => {
+					const fresh = [];
+					for (;;) {
+						this.assertActive();
+						const batch = await this.api.feed(cursor);
+						if (!Array.isArray(batch?.entries) || typeof batch.more !== 'boolean' || (batch.more && !batch.entries.length)) throw Error('Invalid change feed');
+						for (const entry of batch.entries) {
+							if (!validEntry(entry, cursor)) throw Error('Invalid change sequence');
+							cursor = entry.sequence;
+							fresh.push(entry);
+						}
+						if (!batch.more) break;
+					}
+					// Applying ahead never advances the durable feed cursor across pending bulk entries.
+					return this.#receiveContent(fresh);
+				};
+			}
+			await this.#stageTreeDeletions(current);
+			await this.#removeCompleteTrees(current.filter(entry => !this.#heldTree(entry.note)));
+			let windowIndex = 0, nextPrefetch = 0;
+			for (const entry of changes) {
+				if (!targets && ceiling === undefined) await this.#prioritizeContent();
+				const held = this.#heldTree(entry.note);
+				if (held && heads.get(entry.note) === entry) {
+					held.entries[entry.note] = entry;
+					this.state.cursor = entry.sequence;
+					unsavedStates.add(this.state);
+					await this.#persist();
+					replayCursorDirty = false;
+					continue;
+				}
+				if (heads.get(entry.note) !== entry || this.#alreadyApplied(entry)) {
+					this.state.cursor = entry.sequence;
+					replayCursorDirty = true;
+					continue;
+				}
+				while (current[windowIndex] !== entry) windowIndex++;
+				if (windowIndex >= nextPrefetch) {
+					if (windowIndex > 0) await this.#contentPoll?.();
+					const windowEntries = current.slice(windowIndex, windowIndex + this.batchFiles);
+					if (!windowEntries.some(item => item.removed)) nextPrefetch = windowIndex + await this.#prefetch(windowEntries);
+				}
+				this.onProgress(t('msg_f6a511393c', { sequence: entry.sequence }));
+				await this.#receive(entry);
+				const applied = this.state.notes[entry.note];
+				if (entry.removed && applied?.removed && applied.revision === entry.sequence) receivedRemovals.add(applied.path);
+				this.state.cursor = entry.sequence;
+				await this.#persist();
+				replayCursorDirty = false;
+			}
+			// Never persist a cursor beyond an unapplied current revision. Skipped
+			// history after the final applied change needs only one checkpoint.
+			if (replayCursorDirty) await this.#persist();
+		}
+		await this.#finishTreeDeletions();
+		if (receivedRemovals.size) {
+			const removedPaths = [...receivedRemovals];
+			const livePaths = new Set(Object.values(this.state.notes).filter(note => !note.removed).map(note => note.path));
+			for (const note of Object.values(this.state.notes)
+				.filter(note => note.removed && note.kind === 'folder' && !livePaths.has(note.path) &&
+					removedPaths.some(path => path === note.path || path.startsWith(`${note.path}/`)))
+				.sort((a, b) => b.path.length - a.path.length))
+				await this.host.removeFolder?.(note.path);
+		}
+		if (this.direction === 'receive' || this.remoteMode === 'receive') return;
+		await this.#send(targets, ceiling, version, remoteChanged);
+	}
+	async #send(targets, ceiling, version, remoteChanged, priorityPaths) {
+		if (this.#completed.some(task => task.direction === 'receive')) await this.#flush();
+		const cache = this.scanCache;
+		if (!targets && ceiling === undefined && !remoteChanged && version !== undefined &&
+			!Object.keys(this.renames).length && cache?.state === this.state &&
+			cache.version === version && Date.now() >= cache.at && Date.now() - cache.at < 60000) return;
+		let files = (priorityPaths ?? await this.host.list()).filter(path => !this.#heldPath(path));
+		const listedFolders = (priorityPaths ? [] : ((await this.host.listFolders?.()) ?? [])).filter(
+			(path) => !this.excluded(path) && !this.#heldPath(path),
+		);
+		const folderAliases = new Map();
+		if (this.host.canonicalPath) {
+			for (let offset = 0; offset < listedFolders.length; offset += 16) {
+				const batch = listedFolders.slice(offset, offset + 16);
+				const canonical = await Promise.all(batch.map(path => this.host.canonicalPath(path)));
+				for (let index = 0; index < batch.length; index++) folderAliases.set(batch[index], safeNotePath(canonical[index]));
+			}
+			files = [...new Set(files.map(path => {
+				const slash = path.lastIndexOf('/'), parent = path.slice(0, slash);
+				return slash >= 0 && folderAliases.has(parent) ? folderAliases.get(parent) + path.slice(slash) : path;
+			}))];
+		}
+		const folders = [...new Set(listedFolders.map(path => folderAliases.get(path) ?? path))].filter(path => !this.excluded(path));
+		const paths = [
+			...folders.sort((a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b)),
+			...files,
+		];
+		const present = new Set(paths);
+		const folderSet = new Set(folders);
+		const known = Object.entries(this.state.notes);
+		const removedFolders = new Map();
+		for (const [,note] of known) if (note.removed && note.kind === 'folder')
+			removedFolders.set(note.path, Math.max(removedFolders.get(note.path) ?? 0, note.revision));
+		const pendingDeletedFolders = new Set();
+		for (const [,note] of known) if (!note.removed && note.downloaded) {
+			let parent = note.path;
+			while (parent.includes('/')) {
+				parent = parent.slice(0,parent.lastIndexOf('/'));
+				if ((removedFolders.get(parent) ?? 0) > note.revision) pendingDeletedFolders.add(parent);
+			}
+		}
+		const byPath = new Map(
+			known.filter(([, note]) => !note.removed).map((entry) => [entry[1].path, entry]),
+		);
+		const bySpelling = new Map();
+		for (const item of known) if (!item[1].removed) {
+			const key = item[1].path.toLowerCase();
+			if (!bySpelling.has(key)) bySpelling.set(key, []);
+			bySpelling.get(key).push(item);
+		}
+		const missing = (priorityPaths ? [] : known).filter(
+			([, note]) =>
+				!note.removed && note.downloaded && !present.has(note.path) && !this.excluded(note.path) && !this.#heldPath(note.path),
+		);
+		const repathCandidates = missing.filter(([,note]) => (note.kind ?? 'file') === 'file');
+		const repathPositions = new Map(repathCandidates.map(([id],index)=>[id,index]));
+		let repathObjects = new Map(), repathBatchFailed = false;
+		const reusableInfo = async (id,previous) => {
+			if (this.batchTransfer && !repathBatchFailed && typeof this.api.loadBatch === 'function' && (previous.kind ?? 'file') === 'file' && !repathObjects.has(previous.manifest)) {
+				const offset = repathPositions.get(id);
+				const candidates = offset === undefined ? [] : repathCandidates.slice(offset,offset+this.batchFiles);
+				const addresses = [...new Set([previous.manifest,...candidates.filter(([note,value])=>this.state.notes[note]===value).map(([,value])=>value.manifest)])].slice(0,this.batchFiles);
+				repathObjects.clear();
+				try {
+					repathObjects = await this.timed('download', () => this.api.loadBatch(addresses,this.batchBytes));
+					this.assertActive();
+				} catch (error) {
+					repathObjects.clear();
+					if (error?.status===401 || error?.status===403 || error?.name==='AbortError') throw error;
+					repathBatchFailed = true;
+				}
+			}
+			// Every manifest still passes the original note/workspace/address authentication.
+			return inspectNote(this.keys,this.api.workspace,id,previous.manifest,async address=>{
+				if (!repathObjects.has(address)) return this.api.load(address);
+				const bytes = repathObjects.get(address);repathObjects.delete(address);return bytes;
+			});
+		};
+		const used = new Set(Object.keys(this.state.notes));
+		let queuedBytes = 0, queuedStartedAt = 0;
+		const flushUploads = async () => {
+			const jobs = this.#queuedUploads.splice(0);
+			queuedBytes = 0;
+			queuedStartedAt = 0;
+			if (!jobs.length) return;
+			try {
+				const objects = jobs.flatMap(job => job.packed.objects);
+				await this.api.storeBatch(objects);
+				for (const job of jobs) {
+					job.task.bytes = job.packed.objects.reduce((sum, object) => sum + object.body.length, 0);
+					job.task.total = job.task.bytes;
+					await this.onTask({ ...job.task, status: 'progress' });
+					if (job.repath && typeof job.stamp === 'string') {
+						if (job.stamp !== await this.host.stamp(job.path)) throw Object.assign(new Error('Source changed during batch rename'), { code: 'PLAN_CHANGED' });
+					} else {
+						const current = await this.host.read(job.path);
+						if (current === null || (await fingerprint(current)) !== job.digest) throw Object.assign(new Error('Source changed during batch upload'), { code: 'PLAN_CHANGED' });
+					}
+					if (job.repath && job.mtime !== undefined && job.mtime !== await this.host.mtime(job.path)) throw Object.assign(new Error('Source time changed during batch rename'), { code: 'PLAN_CHANGED' });
+					if (job.packed.info.mtime !== undefined && await this.host.mtime(job.path) !== job.packed.info.mtime)
+						throw Object.assign(new Error('Source time changed during batch upload'), { code: 'PLAN_CHANGED' });
+				}
+				const reply = await this.api.commitBatch(jobs.map(job => ({ note: job.id, pathKey: job.pathKey, expected: job.previous?.revision ?? 0, manifest: job.packed.manifest, logicalBytes: job.packed.info.bytes, objects: [...job.packed.info.segments.map(piece => piece.address), job.packed.manifest], removed: false })));
+				if (!Array.isArray(reply?.entries) || reply.entries.length !== jobs.length || reply.entries.some((entry, index) => !validEntry(entry, 0) || entry.note !== jobs[index].id || entry.manifest !== jobs[index].packed.manifest || entry.removed)) throw Error('Invalid batch commit acknowledgement');
+				for (let index = 0; index < jobs.length; index++) {
+					const job = jobs[index];
+					this.state.notes[job.id] = { ...(job.repath ? job.previous : {}), path: job.path, kind: 'file', revision: reply.entries[index].sequence, digest: job.digest, downloaded: true, removed: false, manifest: job.packed.manifest };
+					used.add(job.id);
+					if (job.previous) byPath.delete(job.previous.path);
+					byPath.set(job.path, [job.id, this.state.notes[job.id]]);
+					if (job.contents !== undefined) rememberBase(this.state, job.id, job.contents);
+					this.#completed.push({ ...job.task, status: 'done', workMilliseconds: Math.max(0, performance.now() - job.task.workStartedAt), completedAt: performance.now() });
+					await this.#persist();
+				}
+			} catch (error) {
+				for (const job of jobs) await this.onTask({ ...job.task, status: 'failed', error }).catch(() => {});
+				throw error;
+			}
+		};
+
+		const digests = new Map();
+		// Fingerprints, never whole-vault file bytes, are retained for tree matching.
+		let digestsReady = false;
+		const ensureTreeDigests = async () => {
+			if (digestsReady) return;
+			for (const path of files)
+				if (!this.excluded(path)) {
+					const file = await this.localFile(path);
+					if (file !== null) digests.set(path, file.digest);
+				}
+			digestsReady = true;
+		};
+		const treeDigest = async (root, entries) =>
+			fingerprint(
+				new TextEncoder().encode(
+					JSON.stringify(
+						entries
+							.filter(([path]) => path.startsWith(`${root}/`))
+							.map(([path, kind, digest]) => [path.slice(root.length + 1), kind, digest])
+							.sort((a, b) => a[0].localeCompare(b[0])),
+					),
+				),
+			);
+		const priorTrees = known
+			.filter(([, note]) => !note.removed)
+			.map(([, note]) => [
+				note.path,
+				note.kind ?? 'file',
+				note.kind === 'folder' ? '' : note.digest,
+			]);
+		const currentTrees = () => paths
+			.filter((path) => !this.excluded(path))
+			.map((path) => [
+				path,
+				folderSet.has(path) ? 'folder' : 'file',
+				folderSet.has(path) ? '' : digests.get(path),
+			]);
+		let checked = 0,
+			lastYield = Date.now();
+		for (const raw of paths) {
+			if (!priorityPaths && !targets && ceiling === undefined && (this.contentPriorities.size || (checked > 0 && checked % this.batchFiles === 0 && this.#contentPoll))) {
+				// Finish an existing batch before sharing the normal send pipeline.
+				await flushUploads();
+				const prioritized = new Set([...(await this.#contentPoll?.() ?? []), ...await this.#prioritizeContent()]);
+				for (const [id, note] of Object.entries(this.state.notes))
+					if (!note.removed && prioritized.has(note.path)) { byPath.set(note.path, [id, note]); used.add(id); present.add(note.path); }
+			}
+			this.assertActive();
+			const path = safeNotePath(raw);
+			if (this.excluded(path)) continue;
+			const kind = folderSet.has(path) ? 'folder' : 'file';
+			const file =
+				kind === 'folder'
+					? { contents: new Uint8Array(), digest: await fingerprint(new Uint8Array()) }
+					: await this.localFile(path);
+			if (file === null && priorityPaths) continue;
+			if (file === null)
+				throw Object.assign(new Error('Inventory changed during synchronization'), {
+					code: 'PLAN_CHANGED',
+				});
+			const digest = file.digest;
+			this.assertActive();
+			let found = byPath.get(path);
+			// A parent tombstone may arrive before its children. The still occupied
+			// physical folder belongs to that deletion, rather than a user recreation.
+			if (kind === 'folder' && !found && pendingDeletedFolders.has(path)) continue;
+			if (++checked % 100 === 0) {
+				this.onProgress(t('sync.checked', { checked, total: paths.length }));
+				if (Date.now() - lastYield >= 16) {
+					await this.yieldWork();
+					lastYield = Date.now();
+				}
+			}
+			if (!found) {
+				const aliases = [];
+				if (this.host.sameEntry) for (const candidate of bySpelling.get(path.toLowerCase()) ?? []) {
+					const [id, note] = candidate;
+					if (note.path !== path && note.downloaded && (note.kind ?? 'file') === kind && this.state.notes[id] === note &&
+						!this.excluded(note.path) && await this.host.sameEntry(note.path, path)) aliases.push(candidate);
+				}
+				if (aliases.length === 1) found = aliases[0];
+			}
+			if (!found) {
+				let candidates = missing.filter(
+					([id, note]) =>
+						!note.removed &&
+						note.downloaded &&
+						(note.kind ?? 'file') === kind &&
+						!present.has(note.path) &&
+						!this.excluded(note.path) &&
+						this.state.notes[id] === note,
+				);
+				const sources = new Set(renameSources(path, this.renames));
+				const explicit = candidates.filter(([, note]) => sources.has(note.path));
+				if (explicit.length) candidates = explicit;
+				else {
+					let folderDigest;
+					if (kind === 'folder' && candidates.length) {
+						// Explicit SDK renames already identify the folder. Only an
+						// ambiguous physical move needs descendant fingerprints first.
+						await ensureTreeDigests();
+						folderDigest = await treeDigest(path, currentTrees());
+					}
+					const matches = [];
+					for (const candidate of candidates)
+						if (
+							kind === 'folder'
+								? (await treeDigest(candidate[1].path, priorTrees)) === folderDigest
+								: candidate[1].digest === digest
+						)
+							matches.push(candidate);
+					candidates = matches;
+				}
+				if (candidates.length === 1) found = candidates[0];
+			}
+			const previous = found?.[1];
+			if (previous && previous.path === path && previous.digest === digest) continue;
+			const pathKey = await opaqueNoteId(this.keys, path);
+			let id = found?.[0] ?? pathKey;
+			if (!found && used.has(id))
+				id = await fingerprint(crypto.getRandomValues(new Uint8Array(32)));
+			if (targets && !targets.has(id) && !targets.has(pathKey)) continue;
+			if (this.direction === 'update' && (!previous || previous.removed)) continue;
+			if (this.batchTransfer && typeof this.api.storeBatch === 'function' && typeof this.api.commitBatch === 'function' && kind === 'file' && previous?.digest === digest) {
+				await this.#task({ note: id, pathKey, direction: 'send', path }, async () => {
+					const reusable = await reusableInfo(id,previous);
+					const packed = await repathNote(this.keys, this.api.workspace, id, path, reusable);
+					const size = packed.objects.reduce((sum, object) => sum + object.body.length + 128, 0);
+					if (this.#queuedUploads.length >= this.batchFiles || queuedBytes + size > this.batchBytes - 128 * 1024 || (this.#queuedUploads.length && Date.now() - queuedStartedAt >= this.batchWaitMs)) await flushUploads();
+					this.#queuedUploads.push({ repath: true, task: this.#active, packed, id, pathKey, path, digest, previous, stamp: await this.host.stamp?.(path), mtime: file.mtime });
+					if (!queuedStartedAt) queuedStartedAt = Date.now();
+					queuedBytes += size;
+					return 'staged';
+				});
+				continue;
+			}
+			const contents = file.contents ?? (await this.host.read(path));
+			if (contents === null || (await fingerprint(contents)) !== digest)
+				throw Object.assign(new Error('Source changed before transfer'), { code: 'PLAN_CHANGED' });
+			if (this.batchTransfer && typeof this.api.storeBatch === 'function' && typeof this.api.commitBatch === 'function' && kind === 'file' && !missing.length && !contents.streamed && contents.length <= Math.min(512 * 1024, this.batchBytes - 128 * 1024)) {
+				const packed = await this.timed('pack', () => packNote(this.keys, this.api.workspace, path, contents, undefined, id, kind, file.mtime));
+				// Count retained plaintext too, so highly compressible files cannot fill an oversized queue.
+				const size = contents.length + packed.objects.reduce((sum, object) => sum + object.body.length + 128, 0);
+				if (this.#queuedUploads.length >= this.batchFiles || queuedBytes + size > this.batchBytes - 128 * 1024 || (this.#queuedUploads.length && Date.now() - queuedStartedAt >= this.batchWaitMs)) await flushUploads();
+				await this.#task({ note: id, pathKey, direction: 'send', path }, async () => {
+					this.#queuedUploads.push({ task: this.#active, packed, id, pathKey, path, digest, contents, previous });
+					if (!queuedStartedAt) queuedStartedAt = Date.now();
+					queuedBytes += size;
+					return 'staged';
+				});
+				continue;
+			}
+			await flushUploads();
+			await this.#task({ note: id, pathKey, direction: 'send', path }, async () => {
+				const reusable =
+					previous && previous.digest === digest
+						? await reusableInfo(id,previous)
+						: undefined;
+				const packed = reusable
+					? await repathNote(this.keys, this.api.workspace, id, path, reusable)
+					: await this.timed('pack', () => packNote(this.keys, this.api.workspace, path, contents, undefined, id, kind, file.mtime));
+				try {
+					this.onProgress(t('msg_a8abfc9b25', { path: path, length: formatStorageSize(contents.length) }));
+					const uploadStarted = Date.now(),
+						total = packed.objects.reduce(
+							(sum, object) => sum + (object.body?.length ?? object.bytes),
+							0,
+						);
+					let sent = 0;
+					this.#active.total = total;
+					const store = async object => {
+						const body = object.body ?? (await object.load());
+						await this.api.store({ address: object.address, body });
+						sent += body.length;
+						this.#active.bytes = sent;
+						await this.onTask({ ...this.#active, status: 'progress' });
+						const rate = sent / Math.max(0.001, (Date.now() - uploadStarted) / 1000),
+							eta = Math.ceil((total - sent) / rate);
+						this.onProgress(
+							t('msg_de18758129', {
+								path: path,
+								sent: formatStorageSize(sent),
+								total: formatStorageSize(total),
+								value3: formatStorageSize(rate),
+								eta: eta,
+							}),
+						);
+					};
+					for (let offset = 0; offset < packed.objects.length; offset += this.uploadConcurrency) {
+						// Drain every started request before disposal or retry; commit only after all objects exist.
+						const batch = await Promise.allSettled(packed.objects.slice(offset, offset + this.uploadConcurrency).map(store));
+						const failed = batch.find(result => result.status === 'rejected');
+						if (failed) throw failed.reason;
+					}
+					if (kind === 'file') {
+						const current = await this.host.read(path);
+						if (current === null || (await fingerprint(current)) !== digest)
+							throw Object.assign(new Error('Local content changed during upload'), {
+								code: 'PLAN_CHANGED',
+							});
+						if (file.mtime !== undefined && await this.host.mtime(path) !== file.mtime)
+							throw Object.assign(new Error('Source time changed during upload'), { code: 'PLAN_CHANGED' });
+					}
+					const committed = await this.api.commit(id, {
+						pathKey,
+						expected: previous?.revision ?? 0,
+						manifest: packed.manifest,
+						logicalBytes: packed.info.bytes,
+						objects: [...packed.info.segments.map((piece) => piece.address), packed.manifest],
+						removed: false,
+					});
+					if (
+						!validEntry(committed, 0) ||
+						committed.note !== id ||
+						committed.removed ||
+						committed.manifest !== packed.manifest
+					)
+						throw new Error('Invalid commit acknowledgement');
+					this.state.notes[id] = {
+						path,
+						kind,
+						revision: committed.sequence,
+						digest,
+						downloaded: true,
+						removed: false,
+						manifest: packed.manifest,
+					};
+					used.add(id);
+					if (previous) byPath.delete(previous.path);
+					byPath.set(path, [id, this.state.notes[id]]);
+					if (kind === 'file') rememberBase(this.state, id, contents);
+					await this.#persist();
+				} finally {
+					await packed.dispose?.();
+				}
+			});
+		}
+		await flushUploads();
+		if (priorityPaths) return;
+		if (!targets && ceiling === undefined) await this.#prioritizeContent();
+		const deletions = [];
+		for (const [id, previous] of Object.entries(this.state.notes)) {
+			if (targets && !targets.has(id)) continue;
+			if (this.direction === 'update') break;
+			if (
+				previous.removed ||
+				this.#heldPath(previous.path) ||
+				!previous.downloaded ||
+				present.has(previous.path) ||
+				this.excluded(previous.path)
+			)
+				continue;
+			const exists = this.host.exists
+				? await this.host.exists(previous.path)
+				: (await this.host.read(previous.path)) !== null;
+			if (exists)
+				throw Object.assign(new Error('Incomplete local inventory'), { code: 'PLAN_CHANGED' });
+			deletions.push([id, previous]);
+		}
+		await this.beforeDelete(deletions.length, { direction: 'send', items: deletions.map(([note, previous]) => ({ note, revision: previous.revision, path: previous.path, kind: previous.kind })) });
+		const batchDelete = this.batchDeletes && typeof this.api.commitBatch === 'function';
+		if (batchDelete) {
+			for (let offset = 0; offset < deletions.length; offset += 128) {
+				const batch = deletions.slice(offset, offset + 128);
+				for (const [, previous] of batch)
+					if (this.host.exists ? await this.host.exists(previous.path) : await this.host.read(previous.path) !== null)
+						throw Object.assign(new Error('Local path reappeared before batch deletion'), { code: 'PLAN_CHANGED' });
+				const reply = await this.api.commitBatch(batch.map(([note, previous]) => ({ note, expected: previous.revision, removed: true })));
+				if (!Array.isArray(reply?.entries) || reply.entries.length !== batch.length || reply.entries.some((entry,index) => !validEntry(entry,0) || entry.note !== batch[index][0] || !entry.removed)) throw Error('Invalid batch deletion acknowledgement');
+				for (let index = 0; index < batch.length; index++) {
+					const [id, previous] = batch[index];
+					await this.#task({ note: id, direction: 'delete', path: previous.path }, async () => {
+						this.state.notes[id] = { ...previous, revision: reply.entries[index].sequence, removed: true, downloaded: false };
+						await this.#persist();
+					});
+				}
+			}
+		}
+		for (const [id, previous] of batchDelete ? [] : deletions) {
+			await this.#task({ note: id, direction: 'delete', path: previous.path }, async () => {
+				if (
+					this.host.exists
+						? await this.host.exists(previous.path)
+						: (await this.host.read(previous.path)) !== null
+				)
+					throw Object.assign(new Error('Local path reappeared before deletion'), {
+						code: 'PLAN_CHANGED',
+					});
+				const committed = await this.api.commit(id, {
+					expected: previous.revision,
+					removed: true,
+				});
+				if (!validEntry(committed, 0) || committed.note !== id || !committed.removed)
+					throw new Error('Invalid deletion acknowledgement');
+				this.state.notes[id] = {
+					...previous,
+					revision: committed.sequence,
+					removed: true,
+					downloaded: false,
+				};
+				await this.#persist();
+			});
+		}
+		for (const path of Object.keys(this.state.localIndex))
+			if (!present.has(path)) { delete this.state.localIndex[path]; unsavedStates.add(this.state); }
+		if (cache && !targets && ceiling === undefined && version !== undefined && this.scanVersion() === version)
+			Object.assign(cache, { state: this.state, version, at: Date.now() });
+	}
+	async download(note) {
+		const current = this.state.notes[note];
+		if (!current || current.removed || !current.manifest)
+			throw new Error('Attachment is not available');
+		await this.#receive(
+			{
+				note,
+				sequence: current.revision,
+				manifest: current.manifest,
+				removed: false,
+			},
+			true,
+		);
+		await this.#persist();
+	}
+	async evict(note) {
+		const current = this.state.notes[note];
+		if (!current || current.removed || current.path.toLowerCase().endsWith('.md'))
+			throw new Error('Select a downloaded attachment');
+		const bytes = await this.host.read(current.path);
+		if (bytes !== null && (await fingerprint(bytes)) !== current.digest)
+			throw new Error('Synchronize the edited attachment before removing its local copy');
+		if (bytes !== null) await this.host.remove(current.path);
+		current.downloaded = false;
+		await this.#persist();
+	}
+	async resolve(copy, choice) {
+		if (!['local', 'remote', 'both'].includes(choice)) throw new Error('Invalid conflict choice');
+		const conflict = this.state.conflicts.find((entry) => entry.copy === copy);
+		if (!conflict) return;
+		if (choice === 'local') {
+			const contents = await this.host.read(conflict.copy);
+			if (contents === null) throw new Error('Local conflict copy is missing');
+			await this.host.write(conflict.path, contents);
+		}
+		if (choice !== 'both') await this.host.remove(conflict.copy);
+		this.state.conflicts = this.state.conflicts.filter((entry) => entry !== conflict);
+		await this.#persist();
+	}
+}
