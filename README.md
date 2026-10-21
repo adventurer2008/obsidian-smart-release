@@ -10,13 +10,13 @@ This repository distributes the China edition of 无界同步 through GitHub Rel
 
 Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-sync-release-cn`, then enable Wujie Sync. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
-## Version 0.1.81 — 2026-10-20
+## Version 0.1.82 — 2026-10-21
 
 Device pairing can be approved while file synchronization is running. Pairing requests, device revocation and storage overview refresh do not contend with the file transfer lock. Operations that require a stable file or version state explain when to wait or stop the current round.
 
-Fingerprint verification, encrypted key transfer and account/notebook checks remain required. File contents and original modification times are preserved. The paired hosted service remains 0.1.26, with no new protocol or database schema change. All 0.1.80 functionality remains included; older notebooks still require an updated client to verify original-size metadata.
+Fingerprint verification, encrypted key transfer and account/notebook checks remain required. File contents and original modification times are preserved. The paired hosted service remains 0.1.26, with no new protocol or database schema change. All 0.1.81 functionality remains included; older notebooks still require an updated client to verify original-size metadata.
 
-Complete local checks, paired CI, staging and same-runtime production acceptance are required. Physical Android/iOS/iPad/macOS installation and performance remain unverified. BRAT users tracking latest can update to 0.1.81 when GitHub is reachable. Previous releases are retained. Verify downloaded files against SHA256SUMS.txt.
+Complete local checks, paired CI, staging and same-runtime production acceptance are required. Physical Android/iOS/iPad/macOS installation and performance remain unverified. BRAT users tracking latest can update to 0.1.82 when GitHub is reachable. Previous releases are retained. Verify downloaded files against SHA256SUMS.txt.
 
 ## Account and service
 
@@ -30,7 +30,7 @@ Install files are `main.js`, `manifest.json`, and `styles.css` from a matching G
 
 ### Reproduce the China source preview
 
-Use Node.js 26.11.1. Run `npm ci --ignore-scripts`, `npm test`, then `npm run build`. The default build verifies the snapshot, selects the China production configuration, checks the dependency closure and writes `main.js`, `manifest.json` and `styles.css` at the repository root. A second build must produce the same bytes. These preview outputs are not a new published Release and do not replace historical 0.1.81 binaries.
+Use Node.js 26.11.1. Run `npm ci --ignore-scripts`, `npm test`, then `npm run build`. The default build verifies the snapshot, selects the China production configuration, checks the dependency closure and writes `main.js`, `manifest.json` and `styles.css` at the repository root. A second build must produce the same bytes. The 0.1.82 Release is built from its tagged regional source and checked against the accepted Client/Server candidate. Historical 0.1.81 binaries are unchanged.
 
 CHG-20261021-12 / R308: the former metadata-only boundary is superseded for generated public Client snapshots. Do not develop an independent Client fork here. No version bump, service deployment or new Release is included in this change.
 
@@ -47,3 +47,7 @@ Copyright (c) 2026 lihy. First-party Client code in new candidates after the exi
 ## Repository transition — 2026-10-21
 
 CHG-20261021-06; requirement R304 / DEC282: this repository was renamed from obsidian-smart-release. Existing release tags, assets and plugin ID wujie-sync are retained. Old repository links redirect to this location; new BRAT entries should use the current name. The new public Client source does not issue a new plugin version or replace installed 0.1.81 binaries. The Global edition has its own distribution repository and is not released yet.
+
+## 0.1.82 source and distribution
+
+The fixed public Client 25ccf61bc44fffd4ecaa058aeddbb99f3b5e33e6 is exported here with a China production build entry. Apache-2.0 applies to this new release; historical MIT assets are unchanged. Runtime functionality and the approved China login remain available. Full local validation, exact paired CI, staging and same-package production synthetic acceptance passed for the bound candidate before publication. Community release review and physical-device installation remain separate checks. Global distribution is not included.

@@ -4,7 +4,7 @@
   "sourceCommit": "25ccf61bc44fffd4ecaa058aeddbb99f3b5e33e6",
   "edition": "cn",
   "version": "0.1.82",
-  "previewOnly": true,
+  "previewOnly": false,
   "sourceInputs": {
     "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "THIRD-PARTY-NOTICES.md": "749f0845d4fb42afd41e64f6c4f99c91a1bc72ce795046b9ae491791542eaf2b",
@@ -123,5 +123,12 @@
     "Preserve raw CSS in source-styles.css; root CSS embeds the public logo",
     "Generated verification and contribution rules; no private inputs"
   ],
-  "historicalReleases": "Existing 0.1.81 and earlier MIT releases and assets are unchanged."
+  "historicalReleases": "Existing 0.1.81 and earlier MIT releases and assets are unchanged.",
+  "releaseCandidateDigest": "21f021edd3c836f2a5204020f8786946fbb9a89d9dacf2107b693cd605709a95",
+  "runtimeManifest": "7aeeb81e170189c440f0739fa980b19035182021d806159446842867fd67ab53",
+  "acceptedArtifacts": {
+    "main.js": "094be62cb1598231682399de1432ba7d2de21aa7a40f833542814a8395e350ae",
+    "manifest.json": "96299ed70170d0f2c1726cbf8c9cc8149c7f309c9cf7ae19fe380ff6606252d6",
+    "styles.css": "5c93e51096262f8ccdf8252c94e7d3f90905f33ae6df31b4421d1f10fdb580b1"
+  }
 }
