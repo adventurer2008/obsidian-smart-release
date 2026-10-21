@@ -26,7 +26,13 @@ Contents and paths are encrypted on the client before upload; the service still 
 
 ## Release files and source review
 
-Install files are `main.js`, `manifest.json`, and `styles.css` from a matching GitHub Release. Do not install a source-code archive. Client source is available at [obsidian-smart-sync-client](https://github.com/adventurer2008/obsidian-smart-sync-client). Server source and internal operational tools remain private. This distribution repository contains metadata and documentation; it is not the Client source tree. The plugin includes licensed dependencies; see LICENSE and THIRD-PARTY-NOTICES.md. No credentials or test data are distributed.
+Install files are `main.js`, `manifest.json`, and `styles.css` from a matching GitHub Release. Do not install a source-code archive. Development takes place in [obsidian-smart-sync-client](https://github.com/adventurer2008/obsidian-smart-sync-client). This repository also contains an automatically exported, fixed China source snapshot for Community review. SOURCE-SNAPSHOT.json records its source commit, input hashes and explicit regional transformations. Server source and internal operational tools remain private. The plugin includes licensed dependencies; see LICENSE and THIRD-PARTY-NOTICES.md. No credentials or populated test data are distributed.
+
+### Reproduce the China source preview
+
+Use Node.js 26.11.1. Run `npm ci --ignore-scripts`, `npm test`, then `npm run build`. The default build verifies the snapshot, selects the China production configuration, checks the dependency closure and writes `main.js`, `manifest.json` and `styles.css` at the repository root. A second build must produce the same bytes. These preview outputs are not a new published Release and do not replace historical 0.1.81 binaries.
+
+CHG-20261021-12 / R308: the former metadata-only boundary is superseded for generated public Client snapshots. Do not develop an independent Client fork here. No version bump, service deployment or new Release is included in this change.
 
 ## Migration from 0.1.72 (smart-sync)
 
