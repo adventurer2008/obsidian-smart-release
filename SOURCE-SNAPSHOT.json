@@ -112,7 +112,8 @@
     "scripts/community-build.mjs": "055b7fe738ad1bf23af7f478e2f6b51f0440d7cbc240459f63b28f8e1d06ac4c",
     "scripts/verify-source-snapshot.mjs": "c915134934d9c000e73726c5050a4766dcdb59c52698200b30939ba70eeb696d",
     ".gitignore": "e993dc196186e6371916fc30edbe592891ac2e226cb2716588f5666a0774f81f",
-    "AGENTS.md": "bcec834b29c9909fb5491fce648885961dc2d011952624834664aeff6ee7d01d"
+    "AGENTS.md": "bcec834b29c9909fb5491fce648885961dc2d011952624834664aeff6ee7d01d",
+    ".github/workflows/verify-source.yml": "2751bbb7cbfbd4e1f58e93335a10eb8c3e4c9e8392873cbbe7cd1f3181b96f6e"
   },
   "transformations": [
     "Regional root manifest and default production build",

@@ -1,0 +1,20 @@
+name: Verify regional source
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.11.1'
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run build
+      - run: sha256sum main.js manifest.json styles.css > /tmp/first-build.sha256
+      - run: npm run build
+      - run: sha256sum -c /tmp/first-build.sha256
