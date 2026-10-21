@@ -8,7 +8,7 @@ This repository distributes the China edition of 无界同步 through GitHub Rel
 
 ## Installation
 
-Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-release`, then enable Wujie Sync. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
+Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-sync-release-cn`, then enable Wujie Sync. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
 
 ## Version 0.1.81 — 2026-10-20
 
@@ -20,13 +20,13 @@ Complete local checks, paired CI, staging and same-runtime production acceptance
 
 ## Account and service
 
-An approved China account and notebook encryption passphrase are required. The service origin is `[service endpoint configured by client]`. Project home: https://github.com/adventurer2008/obsidian-smart-release . Overseas Smart Sync accounts and data are separate. Do not enable both editions in the same vault.
+An approved China account and notebook encryption passphrase are required. The service origin is `[service endpoint configured by client]`. Project home: https://github.com/adventurer2008/obsidian-smart-sync-release-cn . Overseas Smart Sync accounts and data are separate. Do not enable both editions in the same vault.
 
 Contents and paths are encrypted on the client before upload; the service still processes account and workspace identifiers, enrollment email, notebook/device labels, timestamps, ciphertext sizes, diagnostics and opaque identifiers. Keep the notebook encryption passphrase safe: the service cannot recover it. See [the privacy notice](PRIVACY.md). Public-beta access is subject to approval; no payment or permanent free-service guarantee is announced. Windows acceptance and physical Android/iOS/macOS acceptance are tracked separately; do not treat `isDesktopOnly: false` as proof of physical-device validation.
 
 ## Release files and source review
 
-Install files are `main.js`, `manifest.json`, and `styles.css` from a matching GitHub Release. Do not install a source-code archive. Client and Server source repositories remain private. The plugin includes licensed dependencies; see LICENSE and THIRD-PARTY-NOTICES.md. No credentials or test data are distributed.
+Install files are `main.js`, `manifest.json`, and `styles.css` from a matching GitHub Release. Do not install a source-code archive. Client source is available at [obsidian-smart-sync-client](https://github.com/adventurer2008/obsidian-smart-sync-client). Server source and internal operational tools remain private. This distribution repository contains metadata and documentation; it is not the Client source tree. The plugin includes licensed dependencies; see LICENSE and THIRD-PARTY-NOTICES.md. No credentials or test data are distributed.
 
 ## Migration from 0.1.72 (smart-sync)
 
@@ -37,3 +37,7 @@ Connection import transfers connection credentials, not all preferences or synch
 ## License scope
 
 Copyright (c) 2026 lihy. First-party Client code in new candidates after the existing 0.1.81 release uses Apache License 2.0; see LICENSE. Existing 0.1.81 and earlier releases retain their original MIT terms and unchanged assets. Dependencies retain their own licenses in THIRD-PARTY-NOTICES.md. The Client license does not cover Server software or grant access to the hosted service. Apache-2.0 permits commercial reuse. This repository update does not replace any published release assets.
+
+## Repository transition — 2026-10-21
+
+CHG-20261021-06; requirement R304 / DEC282: this repository was renamed from obsidian-smart-release. Existing release tags, assets and plugin ID wujie-sync are retained. Old repository links redirect to this location; new BRAT entries should use the current name. The new public Client source does not issue a new plugin version or replace installed 0.1.81 binaries. The Global edition has its own distribution repository and is not released yet.
