@@ -6,6 +6,14 @@
 
 **开始使用：** [操作手册](USER-GUIDE.md) · [安装与更新](USER-GUIDE.md#安装与更新) · [添加第二台设备](USER-GUIDE.md#添加第二台设备) · [常见问题](USER-GUIDE.md#常见问题) · [微信咨询](#联系无界同步小助手)
 
+## 界面预览
+
+以下为手机端界面示例（截图版本 0.1.80），展示登录、同步偏好和配置同步的入口。点击图片可查看原图，详细步骤见[操作手册](USER-GUIDE.md)。
+
+| 账号与同步 | 自动同步 | 同步范围 |
+| --- | --- | --- |
+| <a href="assets/screenshots/account-and-sync.jpg"><img src="assets/screenshots/account-and-sync.jpg" width="220" alt="无界同步手机端：账号登录、设备配对与立即同步入口"></a> | <a href="assets/screenshots/automatic-sync.jpg"><img src="assets/screenshots/automatic-sync.jpg" width="220" alt="无界同步手机端：修改后、启动后与定时自动同步设置"></a> | <a href="assets/screenshots/sync-scope.jpg"><img src="assets/screenshots/sync-scope.jpg" width="220" alt="无界同步手机端：核心插件、社区插件及启用状态同步设置"></a> |
+
 ## 主要功能与亮点
 
 ### 多端同步
