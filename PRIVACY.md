@@ -1,31 +1,31 @@
-# Privacy notice — 无界同步 (China edition)
+# 隐私说明 — 无界同步国内版
 
-Effective date: 18 October 2026.
+生效日期：2026 年 10 月 18 日。本页为中文说明；[英文参考](PRIVACY.en.md)。本次仅调整文档语言，不变更服务的数据处理行为。
 
-## Scope and contact
+## 范围与联系
 
-This notice describes the China edition, plugin ID `wujie-sync` from version 0.1.73 (legacy ID `smart-sync` through 0.1.72), and its service at `[service endpoint configured by client]`. The service is maintained by the 无界同步 project maintainer. Contact: **admin@wujiesync.cc**. The separate Global edition is outside this notice; China and Global accounts and cloud data are independent.
+本说明适用于国内版：0.1.73 起插件 ID 为 `wujie-sync`，0.1.72 及更早为 `smart-sync`，服务地址为 `[service endpoint configured by client]`。服务由无界同步项目维护者维护，联系邮箱：**admin@wujiesync.cc**。Global 版不在本说明范围内，国内与海外账号、云端数据独立。
 
-## Information processed
+## 处理的信息
 
-The plugin encrypts file contents, file paths and original file modification times on the client before uploading them. The service stores encrypted objects and cannot recover a lost notebook encryption passphrase. This is a description of the implementation, not a claim of independent security certification.
+插件在客户端加密文件正文、路径和原始修改时间后上传。服务保存密文对象，无法找回丢失的笔记库加密口令。这是实现方式说明，不代表获得独立安全认证。
 
-The service also processes account and workspace identifiers, enrollment email, application purpose and requested storage, notebook and device labels, authorizations, operation timestamps, sequence numbers, ciphertext sizes and digests, usage/quota information, and opaque object identifiers. These operational fields are not all protected by notebook encryption. Web infrastructure may process connection information such as IP addresses and request times according to its configuration.
+服务还会处理账号与工作区标识、申请邮箱、申请用途与申请容量、笔记库和设备标签、授权、操作时间、序列号、密文大小与摘要、使用量与配额以及不透明对象标识。这些运行字段并非全部受笔记库加密保护。网络基础设施也可能根据配置处理 IP 地址、请求时间等连接信息。
 
-The plugin has no third-party client analytics SDK or advertising. It can report bounded, sanitized synchronization task metadata to its own service for diagnostics; this is not a claim that no operational data is collected. Service audit and diagnostic records support access control, troubleshooting and service operation. Server versions can also maintain account-level usage and activity aggregates; availability depends on the deployed version.
+插件未集成第三方客户端分析 SDK 或广告。为诊断问题，插件可向自身服务报告经过限制和脱敏的同步任务元数据，因此不能理解为完全不收集运行数据。审计和诊断记录用于访问控制、排障与服务运行；部分 Server 版本还维护账号使用量和活跃汇总，具体取决于已部署版本。
 
-## Providers and network access
+## 服务提供方与网络
 
-Synchronization connects to the configured China service. Its hosting and object storage use Alibaba Cloud. Enrollment and access-key delivery use the operator's configured mail provider; the current China setup uses QQ Mail SMTP with the `admin@wujiesync.cc` sender. The email provider processes recipient addresses and delivery contents, including issued login keys. Never put your notebook encryption passphrase into an enrollment application or support email.
+同步连接国内服务，托管和对象存储使用阿里云。申请及登录密钥发放通过运营方配置的邮件服务完成；当前国内配置使用 QQ 邮箱 SMTP，发件地址为 `admin@wujiesync.cc`。邮件提供方会处理收件地址和邮件内容，包括发放的登录密钥。请勿在申请或支持邮件中填写笔记库加密口令。
 
-Installation and updates through BRAT connect to GitHub and download release files from `adventurer2008/obsidian-smart-release`. BRAT is a separate plugin with its own behavior. Optional local-network acceleration can transfer authenticated ciphertext between devices and falls back to the cloud path when unavailable.
+通过 GitHub 或 BRAT 安装和更新时，会连接 GitHub 并下载 `adventurer2008/obsidian-smart-sync-release-cn` 的发行文件；旧仓库地址会跳转至现地址。BRAT 是独立插件，有其自身行为。可选局域网加速在设备间传输经过认证的密文，不可用时回退至云端路径。
 
-## Storage, deletion and local files
+## 保留、删除与本地文件
 
-Encrypted notes, revision history and operational records remain subject to configured service retention, quota and backup policies. There is no fixed universal retention period promised by this notice. Account deletion revokes access and schedules removal of the account's cloud records and objects; failed object cleanup can retry. Backup copies may remain until their retention expires. Signing out or uninstalling the plugin does not by itself delete a cloud account, and account deletion does not remove your local notes.
+加密笔记、版本历史和运行记录受服务配置的保留、配额及备份策略约束。本说明不承诺统一固定的保留期限。注销账号会撤销访问并安排清理该账号的云端记录和对象，失败的对象清理可重试；备份副本可能保留至其保留期结束。退出登录或卸载插件本身不会注销云端账号；注销账号也不会删除本地笔记。
 
-Credentials are managed through Obsidian's secret-storage facilities where supported. Keep local devices, vaults and backups secure. Contact the maintainer about account data or deletion questions. Do not send passwords or login keys to the public GitHub issue tracker.
+在宿主支持的情况下，凭据通过 Obsidian 的秘密存储机制管理。请保护本地设备、笔记库和备份。账号数据或删除问题请联系维护者，不要把密码或登录密钥提交到公开 GitHub issue。
 
-## Changes
+## 更新
 
-Material changes to service data handling will be reflected in this notice and relevant release notes. Review the notice accompanying the version you install.
+服务数据处理发生实质变化时，会更新本说明及相关更新记录。请查阅安装版本随附的隐私说明。

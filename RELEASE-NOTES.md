@@ -1,14 +1,18 @@
-# Wujie Sync 0.1.82
+# 无界同步 0.1.82
 
-- Retains all 0.1.81 functionality, encryption, pairing and original file modification times.
-- Publishes the matching, reproducible China Client source in the same repository as the Release.
-- Uses the current regional repository links and Apache-2.0 for this release; previous MIT releases remain unchanged.
-- Includes maintained release-tool and regression-fixture improvements. Server remains 0.1.26 with no protocol or database schema change.
+[English](RELEASE-NOTES.en.md)
 
-Full local tests (including both large-file rounds), exact paired CI, staging with actual administrator mail receipt and same-runtime production synthetic checks passed before publication. Physical Android/iOS/iPad/macOS acceptance and official Community release review are separate. Google login, billing and Global hosting are not introduced.
+- 保留 0.1.81 的全部功能、加密、配对和文件原始修改时间。
+- 在发行库内提供与安装包对应、可复现构建的国内版 Client 源码。
+- 更新地区仓库链接，本版采用 Apache-2.0；此前 MIT 发行保持不变。
+- 纳入已维护的发布工具与回归样本改进。Server 仍为 0.1.26，没有协议或数据库结构变更。
 
-Public Client source: 25ccf61bc44fffd4ecaa058aeddbb99f3b5e33e6
+发行前已通过完整本地测试（含两轮大文件）、精确配对 CI、预发真实管理员收件及同运行包生产合成验收。官方社区已完成本版扫描及 main.js 逐字节构建一致性验证。物理 Android/iOS/iPad/macOS 验收尚未完成。未引入 Google 登录、付费或 Global 托管服务。
 
-Candidate: 21f021edd3c836f2a5204020f8786946fbb9a89d9dacf2107b693cd605709a95
+公开 Client 来源：`25ccf61bc44fffd4ecaa058aeddbb99f3b5e33e6`
 
-Runtime manifest: 7aeeb81e170189c440f0739fa980b19035182021d806159446842867fd67ab53
+候选摘要：`21f021edd3c836f2a5204020f8786946fbb9a89d9dacf2107b693cd605709a95`
+
+运行包清单摘要：`7aeeb81e170189c440f0739fa980b19035182021d806159446842867fd67ab53`
+
+本页为当前分支中文说明；已发布 0.1.82 的 tag、Release 正文和附件均不在本次修改范围内。下一版 CSS 维护尚未发行。

@@ -1,53 +1,60 @@
-# Wujie Sync
+# 无界同步（Wujie Sync）国内版
 
-Wujie Sync (无界同步) is designed for users in China. Plugin ID: `wujie-sync`.
+面向中国用户的 Obsidian 同步插件。插件 ID：`wujie-sync`。本仓库提供国内版源码快照、安装包、使用说明及更新记录。[English](README.en.md)
 
-Wujie Sync is designed for users in China and is currently in a free public beta. An account and approval are required to use the hosted synchronization service. Paid plans have not been announced. Any future pricing and changes to beta access will be communicated in advance.
+**公测期内，请申请开通。** 当前为免费公测，使用托管同步服务需要账号及审核批准。未来收费及公测访问规则的变化会提前通知，目前未公布付费方案。
 
-This repository distributes the China edition of 无界同步 through GitHub Releases and BRAT.
+## 安装与更新
 
-## Installation
+- 官方社区入口：[Wujie Sync](https://community.obsidian.md/plugins/wujie-sync)。点击 **Add to Obsidian** 进入客户端安装页。审核通过后的客户端搜索收录可能存在延迟。
+- 已通过 BRAT 安装的用户：仓库地址为 `adventurer2008/obsidian-smart-sync-release-cn`，可继续使用 BRAT 更新。
+- 手动安装：从[对应版本的 Release](https://github.com/adventurer2008/obsidian-smart-sync-release-cn/releases)下载同一版本的 `main.js`、`manifest.json` 和 `styles.css`，校验 `SHA256SUMS.txt`。不要把 GitHub 的源码压缩包当作安装包。
 
-Install and enable BRAT from Obsidian Community plugins. In BRAT, add `adventurer2008/obsidian-smart-sync-release-cn`, then enable Wujie Sync. This repository tracks the China edition only. GitHub access is required for BRAT installation and updates. An official manual download may provide the same files and checksums.
+本仓库只提供国内版。访问 GitHub 是从 GitHub 或 BRAT 下载、更新的前提。
 
-## Version 0.1.82 — 2026-10-21
+## 当前版本：0.1.82（2026-10-21）
 
-Device pairing can be approved while file synchronization is running. Pairing requests, device revocation and storage overview refresh do not contend with the file transfer lock. Operations that require a stable file or version state explain when to wait or stop the current round.
+保留 0.1.81 的全部功能、加密、设备配对及文件原始修改时间。同一仓库提供与发行包对应、可复现构建的国内版源码；本版采用 Apache-2.0，历史 MIT 发行保持不变。服务端仍为 0.1.26，没有新增协议或数据库结构变更。详见[更新说明](RELEASE-NOTES.md)。
 
-Fingerprint verification, encrypted key transfer and account/notebook checks remain required. File contents and original modification times are preserved. The paired hosted service remains 0.1.26, with no new protocol or database schema change. All 0.1.81 functionality remains included; older notebooks still require an updated client to verify original-size metadata.
+完整本地测试、精确配对 CI、预发验收、真实管理员邮件收件及同运行包生产合成验收已通过。官方社区已完成 0.1.82 扫描及构建逐字节一致性验证；物理 Android、iOS、iPad、macOS 的安装和性能验收尚未完成。网页上架不等于每台客户端的搜索、安装均已验证。
 
-Complete local checks, paired CI, staging and same-runtime production acceptance are required. Physical Android/iOS/iPad/macOS installation and performance remain unverified. BRAT users tracking latest can update to 0.1.82 when GitHub is reachable. Previous releases are retained. Verify downloaded files against SHA256SUMS.txt.
+## 账号、加密与服务
 
-## Account and service
+国内服务地址为 `[service endpoint configured by client]`，使用已开通的国内账号及笔记库加密口令。国内版与海外版的账号和云端数据独立，不要在同一个笔记库中同时启用两个版本。
 
-An approved China account and notebook encryption passphrase are required. The service origin is `[service endpoint configured by client]`. Project home: https://github.com/adventurer2008/obsidian-smart-sync-release-cn . Overseas Smart Sync accounts and data are separate. Do not enable both editions in the same vault.
+正文、路径及原始修改时间在客户端加密后上传；服务仍会处理账号、工作区、申请邮箱、笔记库和设备标签、时间戳、密文大小、诊断等运行信息。请妥善保管加密口令，服务端无法找回。详见[隐私说明](PRIVACY.md)。公测不代表永久免费承诺。
 
-Contents and paths are encrypted on the client before upload; the service still processes account and workspace identifiers, enrollment email, notebook/device labels, timestamps, ciphertext sizes, diagnostics and opaque identifiers. Keep the notebook encryption passphrase safe: the service cannot recover it. See [the privacy notice](PRIVACY.md). Public-beta access is subject to approval; no payment or permanent free-service guarantee is announced. Windows acceptance and physical Android/iOS/macOS acceptance are tracked separately; do not treat `isDesktopOnly: false` as proof of physical-device validation.
+## 安装文件与源码
 
-## Release files and source review
+唯一 Client 开发主线为 [obsidian-smart-sync-client](https://github.com/adventurer2008/obsidian-smart-sync-client)。本发行库的源码由固定公开提交自动导出，用于同库审核与可复现构建；不要直接在本仓库开发第二套 Client。`SOURCE-SNAPSHOT.json` 记录来源提交、文件摘要和地区转换。Server 源码及内部运维工具保持私有，不公开凭据或真实测试数据。
 
-Install files are `main.js`, `manifest.json`, and `styles.css` from a matching GitHub Release. Do not install a source-code archive. Development takes place in [obsidian-smart-sync-client](https://github.com/adventurer2008/obsidian-smart-sync-client). This repository also contains an automatically exported, fixed China source snapshot for Community review. SOURCE-SNAPSHOT.json records its source commit, input hashes and explicit regional transformations. Server source and internal operational tools remain private. The plugin includes licensed dependencies; see LICENSE and THIRD-PARTY-NOTICES.md. No credentials or populated test data are distributed.
+复现 0.1.82 时请检出对应 tag，并使用 Node.js 26.11.1：
 
-### Reproduce the China source preview
+```sh
+npm ci --ignore-scripts
+npm test
+npm run build
+```
 
-Use Node.js 26.11.1. Run `npm ci --ignore-scripts`, `npm test`, then `npm run build`. The default build verifies the snapshot, selects the China production configuration, checks the dependency closure and writes `main.js`, `manifest.json` and `styles.css` at the repository root. A second build must produce the same bytes. The 0.1.82 Release is built from its tagged regional source and checked against the accepted Client/Server candidate. Historical 0.1.81 binaries are unchanged.
+默认构建会验证源码摘要、选择国内配置、检查依赖闭包，并在根目录输出三个安装文件。重复构建应得到相同字节。本次文档更新不导出下一版源码、不修改已有 tag 或 Release 附件、不部署服务。
 
-CHG-20261021-12 / R308: the former metadata-only boundary is superseded for generated public Client snapshots. Do not develop an independent Client fork here. No version bump, service deployment or new Release is included in this change.
+## 从 0.1.72（smart-sync）迁移
 
-## Migration from 0.1.72 (smart-sync)
+0.1.73 起，国内插件 ID 改为 `wujie-sync`，Obsidian 会将它识别为独立插件，不能直接按原 ID 自动升级。
 
-Version 0.1.73 changes the China plugin ID to `wujie-sync`. Obsidian treats this as a separate plugin, so it is not an automatic in-place upgrade. Back up your vault and plugin settings first. In the old plugin, export an encrypted connection backup and keep its password safe. Disable the old `smart-sync` plugin without signing out or revoking its device authorization. Remove the old repository entry from BRAT, then add the same repository again and enable the new plugin. Import the encrypted connection backup, verify the selected notebook, direction, exclusions and attachment preferences before resuming synchronization. Alternatively, sign in to the same China account and select the existing notebook with its original encryption passphrase; do not create a duplicate notebook.
+1. 先备份笔记库和插件设置；在旧插件中导出加密连接备份，保管好备份密码。
+2. 停用旧 `smart-sync` 插件，不要退出账号或撤销设备授权。
+3. 若使用 BRAT，移除旧仓库条目后重新添加当前国内发行仓库，启用新插件。
+4. 导入加密连接备份，核对账号、笔记库、同步方向、排除项和附件偏好后再恢复同步。也可登录同一国内账号，使用原加密口令选择已有笔记库，不要新建重复库。
 
-Connection import transfers connection credentials, not all preferences or synchronization checkpoints. Review preferences explicitly. Existing cloud data and local notes stay in place. Keep the disabled old plugin directory until synchronization is verified; never enable old and new sync plugins together. Never copy plaintext credentials into data.json. The 0.1.72 tag and assets remain available for reference.
+连接导入只迁移连接凭据，不代表全部偏好或同步检查点已迁移。已有云端数据和本地笔记保持原位，确认同步正常前保留停用的旧插件目录，不要同时启用两个同步插件，也不要把明文凭据复制进 `data.json`。0.1.72 的 tag 和附件保留。
 
-## License scope
+## 许可证与仓库
 
-Copyright (c) 2026 lihy. First-party Client code in new candidates after the existing 0.1.81 release uses Apache License 2.0; see LICENSE. Existing 0.1.81 and earlier releases retain their original MIT terms and unchanged assets. Dependencies retain their own licenses in THIRD-PARTY-NOTICES.md. The Client license does not cover Server software or grant access to the hosted service. Apache-2.0 permits commercial reuse. This repository update does not replace any published release assets.
+Copyright (c) 2026 lihy。0.1.82 及后续 Client 候选采用 [Apache License 2.0](LICENSE)；0.1.81 及更早已发布版本保留原 MIT 条款和附件。第三方依赖遵循 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) 中各自的许可。Client 许可不包含私有 Server，也不授予托管服务访问权；Apache-2.0 允许商业复用。
 
-## Repository transition — 2026-10-21
+本仓库由 `obsidian-smart-release` 改名而来，旧链接保留跳转，插件 ID 不变。[Global 发行库](https://github.com/adventurer2008/obsidian-smart-sync-release-global)当前仍为占位，尚无运行发行版。
 
-CHG-20261021-06; requirement R304 / DEC282: this repository was renamed from obsidian-smart-release. Existing release tags, assets and plugin ID wujie-sync are retained. Old repository links redirect to this location; new BRAT entries should use the current name. The new public Client source does not issue a new plugin version or replace installed 0.1.81 binaries. The Global edition has its own distribution repository and is not released yet.
+## 文档语言
 
-## 0.1.82 source and distribution
-
-The fixed public Client 25ccf61bc44fffd4ecaa058aeddbb99f3b5e33e6 is exported here with a China production build entry. Apache-2.0 applies to this new release; historical MIT assets are unchanged. Runtime functionality and the approved China login remain available. Full local validation, exact paired CI, staging and same-package production synthetic acceptance passed for the bound candidate before publication. Community release review and physical-device installation remain separate checks. Global distribution is not included.
+CHG-20261021-15 / U301/R311 / DEC292：国内发行库的首页、安装说明、隐私说明和后续更新记录以简体中文为主；Global 发行库面向用户的文档使用英文。英文参考副本可保留。许可证原文、第三方版权声明及机器可读字段不为翻译而改写；官方社区要求英文的介绍字段继续使用英文。
