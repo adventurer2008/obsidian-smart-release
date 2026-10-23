@@ -2,7 +2,7 @@
 
 Wujie Sync (无界同步) is designed for users in China. Plugin ID: `wujie-sync`.
 
-Wujie Sync is designed for users in China and is currently in a free public beta. An account and approval are required to use the hosted synchronization service. Paid plans have not been announced. Any future pricing and changes to beta access will be communicated in advance.
+Free hosted sync includes 100 MB. Optional annual plans add storage shared across your vaults. Core sync and encryption are available on the free plan. Paid plans do not renew automatically. Available plans and current prices are shown on the purchase page.
 
 This repository distributes the China edition of 无界同步 through GitHub Releases and BRAT.
 
