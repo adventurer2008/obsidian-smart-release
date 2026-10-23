@@ -5,3 +5,4 @@ execFileSync(process.execPath,['scripts/verify-source-snapshot.mjs'],{stdio:'inh
 execFileSync(process.execPath,['scripts/build.mjs','--edition=cn'],{stdio:'inherit'});
 execFileSync(process.execPath,['scripts/check-isolation.mjs','cn'],{stdio:'inherit'});
 for(const name of ['main.js','manifest.json','styles.css'])copyFileSync('artifacts/cn/'+name,name);
+execFileSync(process.execPath,['scripts/verify-accepted-artifacts.mjs'],{stdio:'inherit'});

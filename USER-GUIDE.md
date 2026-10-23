@@ -2,8 +2,6 @@
 
 适用于无界同步 `wujie-sync` 1.0.0。本文依据现有客户端功能编写；不同设备上的菜单位置可能略有差别，可在 Obsidian 命令面板搜索相关命令。阅读功能介绍请返回[首页](README.md)，了解数据范围请阅读[隐私说明](PRIVACY.md)。
 
-**上线说明：** 本页的套餐购买与续费流程适用于 1.0.0，随该版本正式开放；当前可安装版本以[发行版本列表](https://github.com/adventurer2008/obsidian-smart-sync-release-cn/releases)为准。
-
 ## 目录
 
 - [界面导览](#界面导览)

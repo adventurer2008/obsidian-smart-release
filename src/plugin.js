@@ -1,4 +1,5 @@
 import { edition, assertEditionOrigin, logViewType } from './edition.js';
+import { mountBillingCard } from './billing.js';
 import { t, locale, formatStorageSize, localizedFailure as failureMessage } from './i18n.js';
 import { ConnectionCheckpoints } from './checkpoint.js';
 import { notePinState, queueNotePin, moveNotePins, pinPathSet, synchronizeNotePins } from './pinning.js';
@@ -192,7 +193,7 @@ function formWindow(app, title, fields, submit, submitLabel = t('msg_31fbef1625'
 }
 function applicationDetails(area, changed) {
  const values = { requestedAmount: '', requestedUnit: 'M', purpose: '' };
- area.createEl('p', { text: '公测期内，请申请开通。' });
+ area.createEl('p', { text: '请填写账号开通信息。' });
  new Setting(area).setName('预计使用空间')
   .addText(input => {
    input.inputEl.type = 'number'; input.inputEl.min = '1'; input.inputEl.max = '1048576'; input.inputEl.step = '1';
@@ -788,7 +789,7 @@ export default class IndependentSync extends Plugin {
 		});
 		for (const [id, name, method] of [
 			['toggle-note-pin', t('pin.toggle'), 'toggleActiveNotePin'],
-			['request-access', t('msg_35d9a6514c'), 'requestAccess'],
+			['request-access', edition.edition === 'cn' ? t('billing.openPlans') : t('msg_35d9a6514c'), 'requestAccess'],
 			['registered-login', t('msg_b567a0c85b'), 'enrollment'],
 			['pair-new-device', t('msg_8b943b0cfd'), 'pairThisDevice'],
 			['approve-device', t('msg_0fb566edf8'), 'approveDevice'],
@@ -3121,6 +3122,7 @@ export default class IndependentSync extends Plugin {
 	}
 
 	async requestAccess() {
+  if (edition.edition === 'cn') return this.openBilling();
   let email = '';
   const dialog = new ChoiceWindow(this.app, t('msg_98d23d7e0e'), area => {
    new Setting(area).setName('邮箱').addText(input => { input.inputEl.type = 'email'; input.onChange(value => { email = value; }); });
@@ -3195,12 +3197,13 @@ export default class IndependentSync extends Plugin {
 		this.tab?.update();
 	}
 	async enrollment(initialMode = 'registered') {
-		let mode = initialMode === 'new' ? 'new' : 'registered',
+		let mode = edition.edition !== 'cn' && initialMode === 'new' ? 'new' : 'registered',
 			version = 0;
 		const dialog = new ChoiceWindow(this.app, t('msg_911a5a5fee'), (area) => {
 			const render = () => {
 				version++;
 				area.empty();
+				if (edition.edition !== 'cn') {
 				action(area, t('msg_6d3f7c7e30'), async () => {
 					mode = 'registered';
 					render();
@@ -3209,6 +3212,7 @@ export default class IndependentSync extends Plugin {
 					mode = 'new';
 					render();
 				});
+				}
 				let value = '',
 					pending = false;
 				new Setting(area)
@@ -3329,6 +3333,60 @@ export default class IndependentSync extends Plugin {
 		} finally {
 			this.connecting = false;
 		}
+	}
+	purchaseSession() {
+		try {
+			const value = JSON.parse(this.secret('purchase'));
+			return value.origin === new URL(this.data.settings.origin).origin && /^[A-Za-z0-9_-]{43}$/.test(value.capability) ? value : undefined;
+		} catch { return undefined; }
+	}
+	async billingSummary() {
+		if (this.secret('account') || this.secret('access')) {
+			const api = await this.accountApi(), key = this.secret('account');
+			const data = await api.request('GET', 'billing/entitlement');
+			if (key !== this.secret('account')) throw pairingFault('PAIRING_CHANGED');
+			return data;
+		}
+		const purchase = this.purchaseSession();
+		if (!purchase) return undefined;
+		try { return await this.workspaceApi(purchase.origin, purchase.capability).request('GET', 'billing/guest'); }
+		catch (error) {
+			if (error.status === 401 && this.purchaseSession()?.capability === purchase.capability) {
+				return undefined;
+			}
+			throw error;
+		}
+	}
+	async openBilling(orderId) {
+		if (edition.edition !== 'cn') return;
+		const localId = this.data.localId, origin = new URL(this.data.settings.origin).origin;
+		const guest = !this.secret('account') && !this.secret('access');
+		const live = () => !this.stopped && localId === this.data.localId && origin === new URL(this.data.settings.origin).origin && guest === (!this.secret('account') && !this.secret('access'));
+		const service = new URL(origin);
+		const purchaseBase = origin === edition.stagingOrigin ? 'https://sync.wujiesync.cc/pay-test'
+			: edition.development && service.protocol === 'http:' && ['127.0.0.1','localhost'].includes(service.hostname) ? origin : 'https://sync.wujiesync.cc/pay';
+		if (guest && !this.purchaseSession()) {
+			const capability = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replace(/=+$/, '');
+			this.app.secretStorage.setSecret(`${this.manifest.id}-${localId}-purchase`, JSON.stringify({origin,capability}));
+			if (live()) window.open(purchaseBase + '/plans#register=' + capability, '_blank', 'noopener,noreferrer');
+			return;
+		}
+		const purchase = guest ? this.purchaseSession() : undefined;
+		const api = guest ? this.workspaceApi(origin, purchase.capability) : await this.accountApi(), key = this.secret('account');
+		let entry;
+		try { entry = await api.request('POST', guest ? 'billing/guest/entry' : 'billing/entry', typeof orderId === 'string' ? {orderId} : {}); }
+		catch (error) {
+			if (guest && error.status === 401 && live()) { window.open(purchaseBase + '/plans#register=' + purchase.capability, '_blank', 'noopener,noreferrer'); return; }
+			throw error;
+		}
+		if (!live() || key !== this.secret('account') || (guest && purchase.capability !== this.purchaseSession()?.capability)) return;
+		const url = new URL(entry.url);
+		const expected = new URL(purchaseBase + '/plans');
+		const checkout = expected.pathname.replace(/plans$/, 'checkout/');
+		const allowedPath = typeof orderId === 'string' && /^[a-f0-9]{32}$/.test(orderId) ? checkout + orderId : expected.pathname;
+		if (url.origin !== expected.origin || url.pathname !== allowedPath || url.search || !/^#ticket=[A-Za-z0-9_-]{43}$/.test(url.hash)) throw Error('Invalid purchase entry');
+		if (orderId === true) url.pathname = expected.pathname.replace(/plans$/, 'orders');
+		window.open(url.href, '_blank', 'noopener,noreferrer');
 	}
 	async accountApi() {
 		const key = this.secret('account') || this.secret('access');
@@ -4533,12 +4591,20 @@ class IndependentSettings extends PluginSettingTab {
 				? [['msg_cd2d74373d', 'signOut']]
 				: [
 						['overview.login', 'enrollment'],
-						['overview.apply', 'requestAccess'],
+						...(edition.edition === 'cn' ? [] : [['overview.apply', 'requestAccess']]),
 					],
 		);
 		const notebook = identityRow('overview.notebook', 'label', 'overview.notebookUnavailable', [
 			['overview.manageNotebooks', 'manageNotebooks'],
 		]);
+		const billing = edition.edition === 'cn' ? row('我的套餐', setting => {
+			const credential = plugin.secret('account') || plugin.secret('access');
+			return mountBillingCard(setting, {
+				connected: accountConnected, load: () => plugin.billingSummary(), open: orderId => plugin.openBilling(orderId),
+				live: () => !plugin.stopped && identityScope() === scopeKey && credential === (plugin.secret('account') || plugin.secret('access')),
+				onError: error => plugin.notify(failureMessage(error)),
+			});
+		}) : undefined;
 		const devices = row(
 			t('overview.devices'),
 			(setting) => {
@@ -4595,6 +4661,7 @@ class IndependentSettings extends PluginSettingTab {
 			...header.map(present),
 			present(status),
 			present(account),
+			...(billing ? [present(billing)] : []),
 			...(accountConnected ? [present(notebook)] : []),
 			present(devices),
 			...common.filter((item) => !header.includes(item)).map(present),

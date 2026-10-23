@@ -4,7 +4,7 @@
 	max-height: 60vh;
 	overflow: auto;
 }
-.smart-sync-common { display: flex; flex-wrap: wrap; column-gap: 0.5rem; }
+.smart-sync-common { display: flex; flex-wrap: wrap; }
 .setting-items.smart-sync-common > .setting-item { width: 100%; min-width: 0; box-sizing: border-box; order: 4; }
 .setting-items.smart-sync-common > .setting-item.smart-sync-title { border: 0; padding-bottom: 0; order: 0; }
 .smart-sync-title .setting-item-name { font-size: var(--h2-size); }
@@ -13,7 +13,7 @@
 .smart-sync-version .setting-item-description { white-space: pre-line; }
 .setting-items.smart-sync-common > .setting-item.smart-sync-overview-status { border: 0; padding: 0.5rem 0 0.75rem; order: 2; }
 .smart-sync-overview-status .setting-item-name { font-weight: var(--font-semibold); }
-.setting-items.smart-sync-common > .setting-item.smart-sync-overview-action { border: 0; padding: 0; flex: 0 1 auto; width: auto; margin: 0 0 0.75rem; order: 3; }
+.setting-items.smart-sync-common > .setting-item.smart-sync-overview-action { border: 0; padding: 0; flex: 0 1 auto; width: auto; margin: 0 0 0.75rem; margin-inline-end: 0.5rem; order: 3; }
 .smart-sync-common .smart-sync-overview-action .setting-item-info { display: none; }
 .smart-sync-common .smart-sync-overview-action .setting-item-control { padding: 0; justify-content: flex-start; }
 .smart-sync-section {
@@ -78,19 +78,19 @@
 .setting-items.smart-sync-common > .setting-item.smart-sync-identity-row { order: 2; padding: 0.6rem 0; }
 .smart-sync-identity-row .setting-item-info { min-width: 0; }
 .smart-sync-identity-row .setting-item-description { overflow-wrap: anywhere; }
-.smart-sync-pairing-code {
- color: #2563eb !important;
+.modal-content span.smart-sync-pairing-code {
+ color: #2563eb;
  display: inline-block;
- font-size: 1.6em !important;
- font-weight: 800 !important;
+ font-size: 1.6em;
+ font-weight: 800;
  letter-spacing: 0.14em;
  line-height: 1.2;
  text-align: center;
 }
-.setting-item-control input.smart-sync-pairing-code {
- color: #2563eb !important;
- font-size: 1.6em !important;
- font-weight: 800 !important;
+.modal-content .setting-item-control input.smart-sync-pairing-code {
+ color: #2563eb;
+ font-size: 1.6em;
+ font-weight: 800;
  letter-spacing: 0.14em;
  min-width: 12rem;
  text-align: center;
@@ -182,3 +182,35 @@
 .smart-sync-device-history { margin-top:16px; }
 .smart-sync-device-history > summary { cursor:pointer; color:var(--text-muted); }
 .smart-sync-device-history .smart-sync-device-card { margin-top:12px; }
+.smart-sync-common > .setting-item.smart-sync-billing,
+.setting-item.smart-sync-billing {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  padding: 20px;
+  margin-block: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  background: var(--background-secondary);
+}
+.smart-sync-billing .setting-item-info { margin: 0; min-width: 0; width: 100%; }
+.smart-sync-billing .setting-item-name { display: inline; font-size: var(--font-ui-small); color: var(--text-muted); }
+.smart-sync-billing .setting-item-description:empty { display: none; }
+.smart-sync-billing .setting-item-control { width: auto; justify-content: flex-end; margin: 0 0 0 16px; }
+.smart-sync-billing.is-free .setting-item-control { grid-column: 1 / -1; justify-content: flex-start; margin: 12px 0 0; }
+.setting-item.smart-sync-billing.is-compact { align-items: center; padding-block: 12px; }
+.smart-sync-billing.is-compact .setting-item-name { font-size: var(--font-ui-medium); font-weight: 600; color: var(--text-normal); }
+.smart-sync-plan-badge { float: right; padding: 2px 8px; border-radius: 20px; background: var(--background-modifier-hover); color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.smart-sync-plan-title { margin-block: 14px 10px; font-size: var(--font-ui-large); font-weight: 600; }
+.smart-sync-plan-usage, .smart-sync-plan-expiry { margin-block: 7px; font-size: var(--font-ui-small); }
+.smart-sync-plan-progress { display: block; width: 100%; height: 7px; accent-color: var(--interactive-accent); }
+.smart-sync-plan-progress[hidden] { display: none; }
+.smart-sync-plan-help { margin-top: 10px; color: var(--text-muted); font-size: var(--font-ui-small); line-height: 1.6; }
+.smart-sync-plan-order { margin-top: 10px; color: var(--text-accent); font-size: var(--font-ui-small); overflow-wrap: anywhere; }
+.smart-sync-plan-order:empty { display: none; }
+.smart-sync-billing button.smart-sync-plan-action.is-prominent { min-width: 88px; min-height: 44px; font-size: var(--font-ui-medium); font-weight: 600; }
+@media (max-width: 600px) {
+  .setting-item.smart-sync-billing { padding: 16px; }
+}
+
+.smart-sync-billing button.smart-sync-plan-action[hidden] { display: none !important; }

@@ -295,7 +295,8 @@ export const messages = {
 	'overview.pairHelp': '也可以由已经连接的设备批准，让这台设备加入同步。',
 	'overview.moreAccount': '更多账号操作',
 	'overview.moreAccountHelp': '注销账号并删除全部云端数据，原登录密钥将失效',
-	'overview.accountSearch': '已有账号登录、新用户申请、退出当前账号',
+	'overview.accountSearch': '已有账号登录、退出当前账号',
+	'billing.openPlans': '选择套餐与开通账号',
 	'overview.notebookSearch': '创建笔记库、选择已有笔记库',
 	'overview.deviceSearch': '六位码、配对这台设备、批准新设备与设备管理',
 	'sections.disconnected': '尚未连接账号；可登录或从已有设备配对。',
@@ -515,10 +516,10 @@ export const messages = {
 	msg_316ef5f989: '账号邮箱',
 	msg_104f734a38: '账号登录密钥（不是配对设备密钥）',
 	'account.eraseWarning':
-		'此操作会注销账号，并永久删除账号下全部云端笔记库、历史版本及设备授权。原登录密钥将立即失效，无法再次登录；如需继续使用，必须重新申请密钥。本机笔记保留。',
+		'此操作会注销账号，并永久删除账号下全部云端笔记库、历史版本及设备授权。原登录密钥将立即失效，无法再次登录；如需继续使用，必须重新开通账号。本机笔记保留。',
 	msg_b3588ca8a2: '输入“注销账号”确认，原登录密钥将立即失效。',
 	msg_85ffefa0e5:
-		'账号及全部云端记录已删除，原登录密钥已失效；再次使用需重新申请。本机笔记保留；存储故障造成的对象清理将后续重试。',
+		'账号及全部云端记录已删除，原登录密钥已失效；再次使用需重新开通账号。本机笔记保留；存储故障造成的对象清理将后续重试。',
 	msg_98d23d7e0e: '申请账号授权',
 	msg_f2488fd4ef: '邮箱地址',
 	msg_043fd8bfeb: '申请状态：{status}。',
@@ -657,7 +658,7 @@ export const messages = {
 	msg_aaadf021ad: '附件自动下载上限（MB）',
 	msg_eed334bcb0: '排除路径前缀（每行一条）',
 	msg_21fee58852: '排除扩展名（逗号分隔）',
-	msg_b57c930173: '已有账号登录／新用户申请',
+	msg_b57c930173: '已有账号登录',
 	msg_7db459b789: '配对这台设备',
 	msg_99bd7e2889: '批准新设备',
 	msg_d8f1fd2a10: '管理已配对设备',
@@ -805,6 +806,7 @@ export const englishDraft = {
 	'overview.moreAccountHelp':
 		'Delete the account and all cloud data; the original login key becomes invalid',
 	'overview.accountSearch': 'Sign in, request access and sign out',
+	'billing.openPlans': 'Choose a plan and open an account',
 	'overview.notebookSearch': 'Create or select a notebook',
 	'overview.deviceSearch': 'Six-digit code, pairing, approval and device management',
 	'encryption.passphraseHelp':
