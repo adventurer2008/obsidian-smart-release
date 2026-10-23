@@ -1,5 +1,5 @@
 import { edition, assertEditionOrigin, logViewType } from './edition.js';
-import { mountBillingCard } from './billing.js';
+import { mountBillingCard, capacityWarning } from './billing.js';
 import { t, locale, formatStorageSize, localizedFailure as failureMessage } from './i18n.js';
 import { ConnectionCheckpoints } from './checkpoint.js';
 import { notePinState, queueNotePin, moveNotePins, pinPathSet, synchronizeNotePins } from './pinning.js';
@@ -2262,6 +2262,7 @@ export default class IndependentSync extends Plugin {
 	}
 
 	onunload() {
+		this.capacityWindow?.close();
 		this.noteEncryption?.dispose();
 		for (const view of this.noteSearchViews ?? []) void view.onClose();
 		if (this.notePinSaveTimer) {
@@ -2315,7 +2316,7 @@ export default class IndependentSync extends Plugin {
 	async requestSynchronization() {
 		if (this.stopped || this.stopping || this.connecting) return;
 		if (!this.data.settings.workspace || !['paused', 'send', 'receive', 'update'].includes(this.data.settings.direction) || this.running)
-			return this.synchronize();
+			return this.synchronizeManually();
 		if (this.resumeSyncWindow) return this.resumeSyncWindow;
 		const scope = () => `${this.data.localId}|${this.data.settings.origin}|${this.data.settings.workspace}`;
 		const expected = scope(), direction = this.data.settings.direction;
@@ -2332,7 +2333,7 @@ export default class IndependentSync extends Plugin {
 				if (adjust && this.data.settings.direction === direction) await this.setting('direction', 'both');
 				if (closed || this.stopped || this.stopping || this.connecting || scope() !== expected) return;
 				dialog.close();
-				await this.synchronize();
+				await this.synchronizeManually();
 			};
 			action(area, t('sync.resumeConfirm'), () => proceed(true));
 			if (paused) action(area, t('sync.resumeCancel'), async () => dialog.close());
@@ -2346,6 +2347,10 @@ export default class IndependentSync extends Plugin {
 		this.resumeSyncWindow = dialog;
 		dialog.open();
 		return dialog;
+	}
+	async synchronizeManually() {
+		if (!this.running && !this.stopped && !this.stopping && !this.connecting && this.data.settings.workspace && this.data.settings.direction !== 'receive') await this.warnCapacity();
+		return this.synchronize();
 	}
 	recordLocalRename(from, to) {
 		if (!this.renameKnownPaths) {
@@ -3339,6 +3344,32 @@ export default class IndependentSync extends Plugin {
 			const value = JSON.parse(this.secret('purchase'));
 			return value.origin === new URL(this.data.settings.origin).origin && /^[A-Za-z0-9_-]{43}$/.test(value.capability) ? value : undefined;
 		} catch { return undefined; }
+	}
+	async warnCapacity() {
+		if (edition.edition !== 'cn' || this.stopped || (!this.secret('account') && !this.secret('access'))) return;
+		const binding = () => JSON.stringify([this.data.localId, this.data.settings.origin, this.data.settings.workspace, this.secret('account') || this.secret('access')]);
+		const expected = binding(), live = () => !this.stopped && binding() === expected;
+		let summary;
+		try { summary = await this.billingSummary(); }
+		catch { return; } // Capacity lookup must not disable downloads, cleanup or existing sync error handling.
+		if (!live()) return;
+		const warning = capacityWarning(summary);
+		if (!warning) { this.capacityWindow?.close(); return; }
+		if (this.capacityWindow && !this.capacityWindowLive?.()) this.capacityWindow.close();
+		if (this.capacityWindow) return this.capacityWindow;
+		const dialog = new ChoiceWindow(this.app, warning.title, area => {
+			area.createEl('p', { text: warning.message });
+			action(area, warning.action, async () => {
+				if (this.capacityWindow !== dialog || !live()) { dialog.close(); return; }
+				await this.openBilling();
+				dialog.close();
+			});
+		});
+		dialog.onClose = () => { dialog.contentEl.empty(); if (this.capacityWindow === dialog) { this.capacityWindow = undefined; this.capacityWindowLive = undefined; } };
+		this.capacityWindow = dialog;
+		this.capacityWindowLive = live;
+		dialog.open();
+		return dialog;
 	}
 	async billingSummary() {
 		if (this.secret('account') || this.secret('access')) {

@@ -3,6 +3,11 @@ import { formatStorageSize } from './i18n.js';
 const pending = new Set(['creating', 'pending', 'uncertain']);
 const mountedCards = new WeakMap();
 const statuses = { creating: '正在生成订单', pending: '等待付款', uncertain: '正在核实付款结果，请勿重复付款', paid: '付款成功', rejected: '支付订单创建失败', refund_pending: '退款处理中', refunded: '已退款' };
+export function capacityWarning(data) {
+	const used = data?.usage?.logicalBytes, capacity = data?.entitlement?.logical;
+	if (!Number.isSafeInteger(used) || !Number.isSafeInteger(capacity) || capacity < 0 || used <= capacity) return undefined;
+	return { title: '套餐容量不足', message: `已用 ${formatStorageSize(used)} / ${formatStorageSize(capacity)}，请增加额度后继续上传。`, action: '购买更多额度' };
+}
 export function renewalReminderAt(ends) {
 	const value = new Date(ends), day = value.getUTCDate();
 	value.setUTCDate(1);
@@ -26,6 +31,7 @@ export function billingCard(data, connected, now = Date.now()) {
 	const capacity = connected && (rights?.paid === true || free) ? rights.logical : undefined;
 	const usage = data?.usage?.logicalBytes;
 	return {
+		overage: connected && capacityWarning(data) ? '已超出套餐容量' : '',
 		free, label: free ? '购买更多额度' : purchased ? '续费' : '购买', prominent: !purchased || due || expired,
 		badge: !purchased ? '' : refunded ? '已退款' : expired ? '已到期' : due ? '即将到期' : '已开通',
 		title: free ? '免费 · 100MB' : purchased ? (rights?.paid ? '当期套餐：' : '') + (titles[rights?.paid ? rights.plan : data?.lastPurchase?.plan] ?? '年度套餐') : '',
@@ -53,6 +59,7 @@ export function mountBillingCard(setting, { connected, load, open, live, onError
 	const title = add(setting.infoEl, 'div', 'smart-sync-plan-title');
 	const upcoming = add(setting.infoEl, 'div', 'smart-sync-plan-help');
 	const usage = add(setting.infoEl, 'div', 'smart-sync-plan-usage');
+	const overage = add(setting.infoEl, 'div', 'smart-sync-plan-order'); overage.setAttribute('role', 'status');
 	const progress = add(setting.infoEl, 'progress', 'smart-sync-plan-progress'); progress.max = 1; progress.setAttribute('aria-label', '套餐容量使用情况');
 	const expires = add(setting.infoEl, 'div', 'smart-sync-plan-expiry');
 	const help = add(setting.infoEl, 'div', 'smart-sync-plan-help');
@@ -63,6 +70,7 @@ export function mountBillingCard(setting, { connected, load, open, live, onError
 	function render() {
 		const model = billingCard(data, connected, now());
 		badge.textContent = model.badge; title.textContent = model.title; usage.textContent = model.usage; expires.textContent = model.expires;
+		overage.textContent = model.overage; overage.hidden = !model.overage;
 		badge.hidden = !model.badge;
 		title.hidden = !model.title;
 		setting.settingEl.classList.toggle('is-compact', !model.title && !model.order);
@@ -95,7 +103,7 @@ export function mountBillingCard(setting, { connected, load, open, live, onError
 	render(); void refresh();
 	const dispose = () => {
 		disposed = true; view.clearTimeout(timer); button.removeEventListener('click', click); view.removeEventListener('focus', focus); doc.removeEventListener('visibilitychange', focus);
-		for (const node of [badge, title, upcoming, usage, progress, expires, help, status, button]) node.remove();
+		for (const node of [badge, title, upcoming, usage, overage, progress, expires, help, status, button]) node.remove();
 		if (mountedCards.get(setting.settingEl) === dispose) { mountedCards.delete(setting.settingEl); setting.settingEl.classList.remove('smart-sync-billing', 'is-compact', 'is-free'); }
 	};
 	mountedCards.set(setting.settingEl, dispose);
