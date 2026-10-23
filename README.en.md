@@ -2,6 +2,10 @@
 
 Wujie Sync (无界同步) is designed for users in China. Plugin ID: `wujie-sync`.
 
+**Professional cloud storage. Encrypted notes.**
+
+Notes and attachments are encrypted on your device before upload to a mainstream third-party commercial cloud storage platform. The cloud stores ciphertext; the protected content cannot be read directly without the corresponding decryption key.
+
 Free hosted sync includes 100 MB. Optional annual plans add storage shared across your vaults. Core sync and encryption are available on the free plan. Paid plans do not renew automatically. Available plans and current prices are shown on the purchase page.
 
 This repository distributes the China edition of 无界同步 through GitHub Releases and BRAT.

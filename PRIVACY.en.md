@@ -16,7 +16,7 @@ The plugin has no third-party client analytics SDK or advertising. It can report
 
 ## Providers and network access
 
-Synchronization connects to the configured China service. Its hosting and object storage use Alibaba Cloud. Enrollment and access-key delivery use the operator's configured mail provider; the current China setup uses QQ Mail SMTP with the `admin@wujiesync.cc` sender. The email provider processes recipient addresses and delivery contents, including issued login keys. Never put your notebook encryption passphrase into an enrollment application or support email.
+Synchronization connects to the configured China service. Data is hosted on a mainstream third-party commercial cloud storage platform. Note content, attachments, paths and original modification times are encrypted on your device before upload. The cloud stores ciphertext; these protected contents cannot be read directly without the corresponding decryption key. Enrollment and access-key delivery use the operator's configured mail provider; the current China setup uses QQ Mail SMTP with the `admin@wujiesync.cc` sender. The email provider processes recipient addresses and delivery contents, including issued login keys. Never put your notebook encryption passphrase into an enrollment application or support email.
 
 Installation and updates through BRAT connect to GitHub and download release files from `adventurer2008/obsidian-smart-release`. BRAT is a separate plugin with its own behavior. Optional local-network acceleration can transfer authenticated ciphertext between devices and falls back to the cloud path when unavailable.
 
